@@ -1,85 +1,97 @@
 import numpy as np
 
-from typing import List
+import json
+from collections import deque
 
 from packet import Packet
+from jsonencoder import Encoder
 
 class Buffer:
     def __init__(
         self,
+        time: float, # Seconds
         max_lat: float, # Seconds
         buffer_size: int, # Bits
-        timestamp: float = 0, # Seconds
-    ):
+    ) -> None:
+        self.time = time
         self.max_lat = max_lat
         self.buffer_size = buffer_size
-        self.timestamp = timestamp
-        self.pkt_queue: List[Packet] = []
-        self.pkt_sent: List[Packet] = []
-        self.pkt_dropp: List[Packet] = []
+        self.pkt_buff: deque[Packet] = deque()
+        self.pkt_sent: deque[Packet] = deque()
+        self.pkt_dropp: deque[Packet] = deque()
     
-    def arrive_pkt(self, pkt: Packet):
-        if sum(p.size for p in self.pkt_queue) + pkt.size <= self.buffer_size:
-            self.pkt_queue.append(pkt)
+    def arrive_pkt(self, pkt: Packet) -> None:
+        if sum(p.size for p in self.pkt_buff) + pkt.size <= self.buffer_size:
+            self.pkt_buff.append(pkt)
         else:
+            pkt.drop(self.time)
             self.pkt_dropp.append(pkt)
     
-    def transmit(self, time: float, throughput: float):
-        capacity = time
-        elapsed_time = 0.0
-        for pkt in reversed(self.pkt_queue):
-            sending_time = (pkt.size - pkt.sent_bits)/throughput
-            if capacity >= sending_time and pkt.waited + elapsed_time + sending_time < self.max_lat: # Sending
-                print("Mandou todo")
-                capacity -= sending_time
-                elapsed_time += sending_time
-                pkt.sent_ts = pkt.arrive_ts + pkt.waited + elapsed_time
-                pkt.sent_bits = pkt.size
+    def set_time (self, time: float) -> None:
+        self.time = time
+
+    def transmit(self, time_end: float, throughput: float) -> None:
+        for pkt in list(self.pkt_buff):
+            if self.time == time_end:
+                break
+            
+            # Packet expired before sending
+            if self.time - pkt.arrive_ts > self.max_lat: 
+                pkt.drop(time=self.time)
+                self.pkt_dropp.append(pkt)
+                self.pkt_buff.popleft()
+                continue
+            
+            time_to_send = (pkt.size - pkt.sent_bits)/throughput
+            time_spent = time_to_send if self.time + time_to_send <= time_end else time_end - self.time
+            # Packet expired while sending
+            if (self.time - pkt.arrive_ts) + time_spent > self.max_lat: 
+                time_spent = (pkt.arrive_ts + self.max_lat) - self.time
+                self.time += time_spent
+                pkt.drop(time=self.time)
+                self.pkt_dropp.append(pkt)
+                self.pkt_buff.popleft()
+            
+            # Packet partially sent
+            elif time_spent < time_to_send:
+                self.time += time_spent
+                pkt.send_partial(sending_time=time_spent, throughput=throughput)
+                
+            # Packet sent
+            elif time_spent == time_to_send:
+                self.time += time_spent
+                pkt.send(self.time)
                 self.pkt_sent.append(pkt)
-                self.pkt_queue.pop()
-            elif capacity < sending_time and pkt.waited + capacity < self.max_lat: # Partially sending
-                print("Mandou parte")
-                pkt.sent_bits += capacity*throughput
-                capacity = 0
-                elapsed_time = time
-                break
-            elif capacity >= sending_time and pkt.waited + sending_time >= self.max_lat: # Dropping
-                print("Dropou e continuou transmitindo")
-                sending_time = self.max_lat - pkt.waited
-                pkt.sent_bits += sending_time * throughput
-                capacity -= sending_time # Keep sending until it reaches the max
-                elapsed_time += sending_time
-                self.pkt_dropp.append(pkt)
-                self.pkt_queue.pop()
-            elif capacity < sending_time and pkt.waited + capacity >= self.max_lat: # Dropping
-                print("Dropou e parou")
-                pkt.sent_bits += capacity * throughput
-                capacity = 0
-                elapsed_time = time
-                self.pkt_dropp.append(pkt)
-                self.pkt_queue.pop()
-            else:
-                raise Exception("Unforeseen case in buffer transmisson")
-            pkt.waited += elapsed_time
-            if capacity == 0:
-                break
-        self.timestamp += time
+                self.pkt_buff.popleft()
+        self.time = time_end
+    
+    def __str__(self) -> str:
+        return json.dumps(self.__dict__, cls=Encoder, indent=2)
 
 if __name__ == "__main__":
-    buff = Buffer(max_lat=1, buffer_size=9)
-
     time = 0.0
+    buff = Buffer(time=time, max_lat=1, buffer_size=9)
 
     for i in range (0,5): # Will drop 1 packet
         buff.arrive_pkt(Packet(size=2, arrive_ts=time))
-    print("Received 5*2")
-    print("Dropped {}".format(len(buff.pkt_dropp)))
-    print("Sent {}".format(len(buff.pkt_sent)))
-    print("Buffer {}".format(len(buff.pkt_queue)))
+    print(buff)
 
-    buff.transmit(time=1.1, throughput=8)
-    time += 1
-    print("Transmitted 8")
-    print("Dropped {}".format(len(buff.pkt_dropp)))
-    print("Sent {}".format(len(buff.pkt_sent)))
-    print("Buffer {}".format(len(buff.pkt_queue)))
+    time += 0.9
+    buff.transmit(time_end=time, throughput=8)
+    print(buff)
+
+    for i in range (0,5):
+        buff.arrive_pkt(Packet(size=2, arrive_ts=time))
+    print(buff)
+    
+    time += 10
+    buff.transmit(time_end=time, throughput=8)
+    print(buff)
+
+    for i in range (0,1):
+        buff.arrive_pkt(Packet(size=9, arrive_ts=time))
+    print(buff)
+
+    time += 2
+    buff.transmit(time_end=time, throughput=8)
+    print(buff)
