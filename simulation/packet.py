@@ -30,5 +30,8 @@ class Packet:
         self.drop_ts = time
         self.waited = self.drop_ts - self.arrive_ts
 
+    def calculate_waited (self, time:float) -> float:
+        return time - self.arrive_ts
+
     def __str__(self) -> str:
         return json.dumps(self.__dict__, cls=Encoder, indent=2)
