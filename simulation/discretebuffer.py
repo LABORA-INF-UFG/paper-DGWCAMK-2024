@@ -1,4 +1,5 @@
 import json
+import numpy as np
 from collections import deque
 from typing import List
 
@@ -19,10 +20,10 @@ class DiscreteBuffer:
         self.max_lat = max_lat
         self.packet_size = packet_size
         
-        self.buff = [0]*int(self.max_lat/self.interval)
+        self.buff = [0]*int(np.ceil(self.max_lat/self.interval))
         for pkt in list(real_buff):
             i = int(pkt.calculate_waited(self.time)/self.interval)
-            if i == len(self.buff):
+            if i == len(self.buff): # Case waited == max_lat
                 i -= 1
             self.buff[i] += 1
     

@@ -110,7 +110,7 @@ class Buffer:
             arriv_bits += pkt.size
         return arriv_bits
     
-    def get_discrete_buffer(self, interval: float):
+    def get_discrete_buffer(self, interval: float) -> DiscreteBuffer:
         if self.packet_size is None:
             raise Exception("Cannot generate discrete buffer because the buffer's packet size is not defined")
         return DiscreteBuffer(
