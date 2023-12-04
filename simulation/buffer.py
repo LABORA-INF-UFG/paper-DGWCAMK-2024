@@ -1,10 +1,9 @@
-import numpy as np
-
 import json
 from collections import deque
 
 from packet import Packet
 from jsonencoder import Encoder
+from discretebuffer import DiscreteBuffer
 
 class Buffer:
     def __init__(
@@ -12,10 +11,12 @@ class Buffer:
         time: float, # Seconds
         max_lat: float, # Seconds
         buffer_size: int, # Bits
+        packet_size: int = None # Bits
     ) -> None:
         self.time = time
         self.max_lat = max_lat
         self.buffer_size = buffer_size
+        self.packet_size = packet_size
         self.pkt_buff: deque[Packet] = deque()
         self.pkt_sent: deque[Packet] = deque()
         self.pkt_dropp: deque[Packet] = deque()
@@ -26,12 +27,23 @@ class Buffer:
         self.time = time
 
     def arrive_pkt(self, pkt: Packet) -> None:
+        if self.packet_size is not None and pkt.size != self.packet_size:
+            raise Exception("The buffer's packet size does not match the arrived packet's size")
         self.pkt_arriv.append(pkt)
         if sum(p.size for p in self.pkt_buff) + pkt.size <= self.buffer_size:
             self.pkt_buff.append(pkt)
         else:
             pkt.drop(self.time)
             self.pkt_dropp.append(pkt)
+    
+    def generate_and_arrive_pkts (self, n_packets:int):
+        for i in range(n_packets):
+            self.arrive_pkt(
+                Packet(
+                    size=self.packet_size,
+                    arrive_ts=self.time
+                )
+            )
     
     def __drop_pkt(self) -> None:
         pkt = self.pkt_buff.popleft()
@@ -97,38 +109,46 @@ class Buffer:
                 break
             arriv_bits += pkt.size
         return arriv_bits
+    
+    def get_discrete_buffer(self, interval: float):
+        if self.packet_size is None:
+            raise Exception("Cannot generate discrete buffer because the buffer's packet size is not defined")
+        return DiscreteBuffer(
+            real_buff=list(self.pkt_buff),
+            time=self.time,
+            interval=interval,
+            max_lat=self.max_lat,
+            packet_size=self.packet_size
+        )
 
     def __str__(self) -> str:
         return json.dumps(self.__dict__, cls=Encoder, indent=2)
 
 if __name__ == "__main__":
     time = 0.0
-    buff = Buffer(time=time, max_lat=1, buffer_size=9)
+    buff = Buffer(time=time, max_lat=1, buffer_size=9, packet_size=1)
 
-    for i in range (0,5): # Will drop 1 packet
-        buff.arrive_pkt(Packet(size=2, arrive_ts=time))
-    print(buff)
+    buff.generate_and_arrive_pkts(5)
 
     time += 0.9
     buff.transmit(time_end=time, throughput=8)
     print(buff)
 
-    for i in range (0,5):
-        buff.arrive_pkt(Packet(size=2, arrive_ts=time))
+    buff.generate_and_arrive_pkts(10)
     print(buff)
     
     time += 10
-    buff.transmit(time_end=time, throughput=8)
-    print(buff)
-
-    for i in range (0,1):
-        buff.arrive_pkt(Packet(size=9, arrive_ts=time))
-    print(buff)
-
-    time += 2
     buff.transmit(time_end=time, throughput=8)
     print(buff)
     print("avg_buff_lat:", buff.get_avg_buff_lat())
     print("buffer bits:", buff.get_buff_bits())
     print("arriv_bits in the last 15 seconds:", buff.get_arriv_pkts_bits(15))
     print("dropp_bits in the last 20 seconds:", buff.get_dropp_pkts_bits(20))
+
+    buff.generate_and_arrive_pkts(20)
+    print(buff)
+
+    for _ in range (11):
+        time += 0.1
+        buff.transmit(time_end=time, throughput=8)
+        print(buff.get_discrete_buffer(0.1).buff) # Discretized buffer for TTI = 0.1s
