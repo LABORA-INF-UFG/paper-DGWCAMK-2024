@@ -5,18 +5,28 @@ from packet import Packet
 from jsonencoder import Encoder
 from discretebuffer import DiscreteBuffer
 
-class Buffer:
+class BufferConfiguration:
     def __init__(
         self,
-        time: float, # Seconds
-        max_lat: float, # Seconds
-        buffer_size: int, # Bits
-        packet_size: int = None # Bits
+        time: float, # s
+        max_lat: float, # s
+        buffer_size: int, # bits
+        packet_size: int = None, # bits
     ) -> None:
         self.time = time
         self.max_lat = max_lat
         self.buffer_size = buffer_size
         self.packet_size = packet_size
+
+class Buffer:
+    def __init__(
+        self,
+        config: BufferConfiguration,
+    ) -> None:
+        self.time = config.time
+        self.max_lat = config.max_lat
+        self.buffer_size = config.buffer_size
+        self.packet_size = config.packet_size
         self.pkt_buff: deque[Packet] = deque()
         self.pkt_sent: deque[Packet] = deque()
         self.pkt_dropp: deque[Packet] = deque()
@@ -126,7 +136,11 @@ class Buffer:
 
 if __name__ == "__main__":
     time = 0.0
-    buff = Buffer(time=time, max_lat=1, buffer_size=9, packet_size=1)
+    buff = Buffer(
+        BufferConfiguration(
+            time=time, max_lat=1, buffer_size=9, packet_size=1
+        )
+    )
 
     buff.generate_and_arrive_pkts(5)
 
