@@ -11,41 +11,50 @@ from flow import Flow, FlowConfiguration
 from user import User, UserConfiguration
 from intrasched import IntraSliceScheduler
 
+class SliceConfiguration:
+    def __init__(
+        self,
+        type: str, # embb, urllc, be...
+        requirements: Dict[str, float],
+        user_config: UserConfiguration,
+    ):
+        self.type = type
+        self.requirements = requirements
+        self.user_config = user_config
+
 class Slice:
     def __init__(
         self,
         id: int,
-        type: str, # embb, urllc, be...
-        requirements: Dict[str, float],
+        time:float, # s
+        config: SliceConfiguration,
         scheduler: IntraSliceScheduler,
-        user_config: UserConfiguration,
-        rbgs: List[RBG] = None
-        
+        rng: np.random.BitGenerator,
     ) -> None:
         self.id = id
-        self.type = type
-        self.requirements = requirements
+        self.time = time
+        self.type = config.type
+        self.requirements = config.requirements
+        self.user_config = config.user_config
         self.scheduler = scheduler
-        self.user_config = user_config
-        self.rbgs = rbgs
+        self.rng = rng
+        self.rbgs: List[RBG] = []
         self.users: Dict[int, User] = dict()
         
     def generate_and_add_users(self, user_ids: List[int]) -> None:
         for id in user_ids:
-            self.add_user(
-                User(
-                    id = id,
-                    rbgs = [],
-                    buff = Buffer(config=self.user_config.buff_config),
-                    flow = Flow(config=self.user_config.flow_config)
-                )
-            )
+            self.add_user(user_id=id, user_config=self.user_config)
 
-    def add_user(self, u: User) -> None:
-        if u.id in self.users.values():
-            raise Exception("User {} is already assigned to slice {}".format(u.id, self.id))
-        u.set_requirements(requirements=self.requirements)
-        self.users[u.id] = u
+    def add_user(self, user_id: int, user_config: UserConfiguration) -> None:
+        if user_id in self.users.values():
+            raise Exception("User {} is already assigned to slice {}".format(user_id, self.id))
+        self.users[user_id] = User(
+            id=user_id,
+            time=self.time,
+            config=user_config,
+            rng=self.rng
+        )
+        self.users[user_id].set_requirements(requirements=self.requirements)
 
     def update_user_requirements(self) -> None:
         for u in self.users.values():
@@ -60,11 +69,16 @@ class Slice:
             u.arrive_pkts(time_end=time_end)
     
     def transmit(self, time_end:float) -> None:
+        self.schedule_rbgs()
         for u in self.users.values():
             u.transmit(time_end=time_end)
-
-    def set_rbgs (self, rbgs: List[RBG]) -> None:
-        self.rbgs = rbgs
+        self.time = time_end
+    
+    def allocate_rbg(self, rbg:RBG) -> None:
+        self.rbgs.append(rbg)
+    
+    def clear_rbg_allocation(self) -> None:
+        self.rbgs: List[RBG] = []
 
     def schedule_rbgs(self) -> None:
         self.scheduler.schedule(rbgs=self.rbgs, users=self.users)
@@ -74,9 +88,9 @@ class Slice:
 
 if __name__ == "__main__":
     from intrasched import RoundRobin
-    import numpy as np
 
     time = 0.0 # s
+    rng = np.random.default_rng()
 
     rbg_list: List[RBG] = []
     for i in range(5):
@@ -87,32 +101,36 @@ if __name__ == "__main__":
 
     user_config = UserConfiguration(
         buff_config=BufferConfiguration(
-            time=time,
             max_lat=0.1, # s
             buffer_size=1024*1024, # bits
-            packet_size=1024 # bits
         ),
         flow_config=FlowConfiguration(
             type="poisson",
             throughput=5e6, # bits
-            packet_size=1024, # bits
-            time=time, # s
-            rng=np.random.default_rng()
-        )
+        ),
+        pkt_size=1024 # bits
     )
-
-    s = Slice(
-        id=0,
+    
+    slice_config = SliceConfiguration(
         type="embb",
         requirements={
             "latency": 0.5, # s
             "throughput": 5e6, # bits/s
             "packet_loss": 0.2, # ratio
         },
-        scheduler=RoundRobin(),
-        user_config=user_config,
-        rbgs=rbg_list # 5 RBGs
+        user_config=user_config
     )
+
+    s = Slice(
+        id=0,
+        time=time,
+        config=slice_config,
+        scheduler=RoundRobin(),
+        rng=rng
+    )
+
+    for rbg in rbg_list:
+        s.allocate_rbg(rbg)
 
     s.generate_and_add_users(range(3)) # Generating 3 users
     
@@ -124,7 +142,9 @@ if __name__ == "__main__":
     s.schedule_rbgs()
     s.transmit(time_end=time)
 
-    s.set_rbgs(rbg_list[0:3])
+    s.clear_rbg_allocation()
+    for rbg in rbg_list[0:3]:
+        s.allocate_rbg(rbg)
 
     time += 1e-3 # 1ms
     s.arrive_pkts(time_end=time)

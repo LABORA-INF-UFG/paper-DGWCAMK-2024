@@ -8,52 +8,34 @@ from discretebuffer import DiscreteBuffer
 class BufferConfiguration:
     def __init__(
         self,
-        time: float, # s
         max_lat: float, # s
         buffer_size: int, # bits
-        packet_size: int = None, # bits
     ) -> None:
-        self.time = time
         self.max_lat = max_lat
         self.buffer_size = buffer_size
-        self.packet_size = packet_size
 
 class Buffer:
     def __init__(
         self,
+        time: float, # s
         config: BufferConfiguration,
     ) -> None:
-        self.time = config.time
+        self.time = time
         self.max_lat = config.max_lat
         self.buffer_size = config.buffer_size
-        self.packet_size = config.packet_size
         self.pkt_buff: deque[Packet] = deque()
         self.pkt_sent: deque[Packet] = deque()
         self.pkt_dropp: deque[Packet] = deque()
         self.pkt_arriv: deque[Packet] = deque()
         self.agg_waited_sent = 0.0 # Aggregated waited time for sent packets
-    
-    def set_time (self, time: float) -> None:
-        self.time = time
 
     def arrive_pkt(self, pkt: Packet) -> None:
-        if self.packet_size is not None and pkt.size != self.packet_size:
-            raise Exception("The buffer's packet size does not match the arrived packet's size")
         self.pkt_arriv.append(pkt)
         if sum(p.size for p in self.pkt_buff) + pkt.size <= self.buffer_size:
             self.pkt_buff.append(pkt)
         else:
             pkt.drop(self.time)
             self.pkt_dropp.append(pkt)
-    
-    def generate_and_arrive_pkts (self, n_packets:int):
-        for i in range(n_packets):
-            self.arrive_pkt(
-                Packet(
-                    size=self.packet_size,
-                    arrive_ts=self.time
-                )
-            )
     
     def __drop_pkt(self) -> None:
         pkt = self.pkt_buff.popleft()
@@ -120,15 +102,13 @@ class Buffer:
             arriv_bits += pkt.size
         return arriv_bits
     
-    def get_discrete_buffer(self, interval: float) -> DiscreteBuffer:
-        if self.packet_size is None:
-            raise Exception("Cannot generate discrete buffer because the buffer's packet size is not defined")
+    def get_discrete_buffer(self, interval: float, pkt_size: int) -> DiscreteBuffer:
         return DiscreteBuffer(
             real_buff=list(self.pkt_buff),
             time=self.time,
             interval=interval,
             max_lat=self.max_lat,
-            packet_size=self.packet_size
+            packet_size=pkt_size
         )
 
     def __str__(self) -> str:
@@ -136,9 +116,12 @@ class Buffer:
 
 if __name__ == "__main__":
     time = 0.0
+    packet_size = 1
     buff = Buffer(
         BufferConfiguration(
-            time=time, max_lat=1, buffer_size=9, packet_size=1
+            time=time,
+            max_lat=1,
+            buffer_size=9
         )
     )
 
@@ -165,4 +148,4 @@ if __name__ == "__main__":
     for _ in range (11):
         time += 0.1
         buff.transmit(time_end=time, throughput=8)
-        print(buff.get_discrete_buffer(0.1).buff) # Discretized buffer for TTI = 0.1s
+        print(buff.get_discrete_buffer(interval=0.1,pkt_size=packet_size).buff) # Discretized buffer for TTI = 0.1s
