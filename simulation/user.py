@@ -39,7 +39,7 @@ class User:
         for rbg in self.rbgs:
             total_bandwidth += rbg.bandwidth
         return total_bandwidth * self.SE
-        
+    
     def arrive_pkts(self, time_end:float):
         self.buff.generate_and_arrive_pkts(self.flow.n_arrive_pkts(time_end))
 
@@ -54,6 +54,12 @@ class User:
 
     def set_requirements(self, requirements: Dict[str, float]) -> None:
         self.set_requirements = requirements
+
+    def allocate_rbg(self, rbg:RBG) -> None:
+        self.rbgs.append(rbg)
+    
+    def clear_rbg_allocation(self) -> None:
+        self.rbgs: List[RBG] = []
 
     def __str__(self) -> str:
         return json.dumps(self.__dict__, cls=Encoder, indent=2)
