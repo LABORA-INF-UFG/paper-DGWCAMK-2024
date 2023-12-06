@@ -65,6 +65,8 @@ class BaseStation:
             s.arrive_pkts(time_end=time_end)
 
     def transmit(self, time_end: float) -> None:
+        if len(self.rbgs) == 0:
+            raise Exception("Basestation {} cannot transmit because it has no RBGs".format(self.id))
         self.schedule_rbgs()
         for s in self.slices.values():
             s.transmit(time_end=time_end)
