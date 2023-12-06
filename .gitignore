@@ -1,3 +1,1 @@
-*.pyc
-simulation/__pycache__/jsonencoder.cpython-37.pyc
-simulation/__pycache__/packet.cpython-37.pyc
+simulation/__pycache__/*
