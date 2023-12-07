@@ -1,5 +1,6 @@
 import numpy as np
 import json
+from typing import List
 
 from simulation.jsonencoder import Encoder
 from simulation.buffer import Buffer
@@ -45,15 +46,12 @@ class Flow:
     def set_throughput(self, throughput:float):
         self.throughput = throughput
 
-    def generate_and_arrive_pkts (self, time_end:float, buffer:Buffer, pkt_size:int) -> None:
+    def generate_pkts (self, time_end:float, buffer:Buffer, pkt_size:int) -> List[Packet]:
+        pkts: List[Packet] = []
         for i in range(self.n_arrive_pkts(time_end, pkt_size=pkt_size)):
-            buffer.arrive_pkt(
-                Packet(
-                    size=pkt_size,
-                    arrive_ts=self.time
-                )
-            )
+            pkts.append(Packet(size=pkt_size,arrive_ts=self.time))
         self.time = time_end
+        return pkts
     
     def set_time (self, time:float) -> None:
         self.time = time

@@ -1,6 +1,7 @@
 import json
 from collections import deque
 
+from typing import List, Tuple
 from simulation.packet import Packet
 from simulation.jsonencoder import Encoder
 from simulation.discretebuffer import DiscreteBuffer
@@ -28,14 +29,21 @@ class Buffer:
         self.pkt_dropp: deque[Packet] = deque()
         self.pkt_arriv: deque[Packet] = deque()
         self.agg_waited_sent = 0.0 # Aggregated waited time for sent packets
+        self.hist_buffer_bits:List[Tuple[float,int]] = []
+        self.hist_buffer_bits.append((-1.0, 0))
 
-    def arrive_pkt(self, pkt: Packet) -> None:
-        self.pkt_arriv.append(pkt)
-        if sum(p.size for p in self.pkt_buff) + pkt.size <= self.buffer_size:
-            self.pkt_buff.append(pkt)
-        else:
-            pkt.drop(self.time)
-            self.pkt_dropp.append(pkt)
+    def __hist_update_after_arrival(self) -> None:
+        self.hist_buffer_bits.append((self.time, self.get_buff_bits()))
+
+    def arrive_pkts(self, pkts: List[Packet]) -> None:
+        for pkt in pkts:
+            self.pkt_arriv.append(pkt)
+            if sum(p.size for p in self.pkt_buff) + pkt.size <= self.buffer_size:
+                self.pkt_buff.append(pkt)
+            else:
+                pkt.drop(self.time)
+                self.pkt_dropp.append(pkt)
+        self.__hist_update_after_arrival()
     
     def __drop_pkt(self) -> None:
         pkt = self.pkt_buff.popleft()
@@ -49,8 +57,8 @@ class Buffer:
         self.agg_waited_sent += pkt.waited
 
     def transmit(self, time_end: float, throughput: float) -> None:
-        for pkt in list(self.pkt_buff):
-            if self.time == time_end:
+        for pkt in list(self.pkt_buff): # From old to new
+            if self.time >= time_end:
                 break
             
             # Packet expired before sending
@@ -77,17 +85,14 @@ class Buffer:
                 self.time += time_spent
                 self.__send_pkt()
         self.time = time_end
-    
-    def get_avg_buff_lat(self) -> float:
-        return self.agg_waited_sent/len(self.pkt_sent)
 
-    def get_buff_bits(self) -> float:
+    def get_buff_bits(self) -> int:
         return sum (p.size for p in list(self.pkt_buff))
 
     def get_dropp_pkts_bits(self, time_window: float) -> float:
         limit = self.time - time_window
         dropp_bits = 0
-        for pkt in reversed(list(self.pkt_dropp)):
+        for pkt in reversed(list(self.pkt_dropp)): # From new to old
             if pkt.drop_ts < limit:
                 break
             dropp_bits += pkt.size
@@ -96,56 +101,48 @@ class Buffer:
     def get_arriv_pkts_bits(self, time_window: float) -> float:
         limit = self.time - time_window
         arriv_bits = 0
-        for pkt in reversed(list(self.pkt_arriv)):
+        for pkt in reversed(list(self.pkt_arriv)): # From new to old
             if pkt.arrive_ts < limit:
                 break
             arriv_bits += pkt.size
         return arriv_bits
     
-    def get_discrete_buffer(self, interval: float, pkt_size: int) -> DiscreteBuffer:
+    def get_sent_pkts_bits(self, time_window: float) -> float:
+        limit = self.time - time_window
+        sent_bits = 0
+        for pkt in reversed(list(self.pkt_sent)): # From new to old
+            if pkt.sent_ts < limit:
+                break
+            sent_bits += pkt.size
+        return sent_bits
+    
+    def get_avg_buffer_latency(self) -> float:
+        if len(self.pkt_sent) == 0:
+            return 0.0
+        return self.agg_waited_sent/len(self.pkt_sent)
+
+    def get_buffer_occupancy(self) -> float:
+        return self.get_buff_bits()/self.buffer_size
+
+    def get_arriv_and_buff_pkts_bits(self, time_window:float) -> float:
+        total = 0
+        for buff_bits in reversed(self.hist_buffer_bits):
+            if buff_bits[0] < self.time-time_window:
+                total+= buff_bits[1]
+                break
+        total += self.get_arriv_pkts_bits(time_window=time_window)
+        return total
+
+    def get_pkt_loss_rate(self, time_window:float) -> float:
+        return self.get_dropp_pkts_bits(time_window)/self.get_arriv_and_buff_pkts_bits(time_window)
+
+    def get_discrete_buffer(self, interval: float) -> DiscreteBuffer:
         return DiscreteBuffer(
             real_buff=list(self.pkt_buff),
             time=self.time,
             interval=interval,
             max_lat=self.max_lat,
-            packet_size=pkt_size
         )
 
     def __str__(self) -> str:
         return json.dumps(self.__dict__, cls=Encoder, indent=2)
-
-if __name__ == "__main__":
-    time = 0.0
-    packet_size = 1
-    buff = Buffer(
-        BufferConfiguration(
-            time=time,
-            max_lat=1,
-            buffer_size=9
-        )
-    )
-
-    buff.generate_and_arrive_pkts(5)
-
-    time += 0.9
-    buff.transmit(time_end=time, throughput=8)
-    print(buff)
-
-    buff.generate_and_arrive_pkts(10)
-    print(buff)
-    
-    time += 10
-    buff.transmit(time_end=time, throughput=8)
-    print(buff)
-    print("avg_buff_lat:", buff.get_avg_buff_lat())
-    print("buffer bits:", buff.get_buff_bits())
-    print("arriv_bits in the last 15 seconds:", buff.get_arriv_pkts_bits(15))
-    print("dropp_bits in the last 20 seconds:", buff.get_dropp_pkts_bits(20))
-
-    buff.generate_and_arrive_pkts(20)
-    print(buff)
-
-    for _ in range (11):
-        time += 0.1
-        buff.transmit(time_end=time, throughput=8)
-        print(buff.get_discrete_buffer(interval=0.1,pkt_size=packet_size).buff) # Discretized buffer for TTI = 0.1s

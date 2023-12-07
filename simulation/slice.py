@@ -69,7 +69,6 @@ class Slice:
             u.arrive_pkts(time_end=time_end)
     
     def transmit(self, time_end:float) -> None:
-        self.schedule_rbgs()
         for u in self.users.values():
             u.transmit(time_end=time_end)
         self.time = time_end
@@ -83,6 +82,64 @@ class Slice:
     def schedule_rbgs(self) -> None:
         self.scheduler.schedule(rbgs=self.rbgs, users=self.users)
 
+    def get_buffer_occupancy(self) -> float:
+        if len(self.users) == 0:
+            return 0
+        result = 0.0
+        for u in self.users.values():
+            result += u.get_buffer_occupancy()
+        return result/len(self.users)
+
+    def get_avg_buffer_latency(self) -> float:
+        if len(self.users) == 0:
+            return 0
+        result = 0.0
+        for u in self.users.values():
+            result += u.get_avg_buffer_latency()
+        return result/len(self.users)
+    
+    def get_pkt_loss_rate(self, time_window:float) -> float:
+        if len(self.users) == 0:
+            return 0
+        if time_window < 0:
+            raise Exception("Time window must be positive")
+        if self.time == 0:
+            raise Exception("The simulation did not start yet")
+        if self.time - time_window < 0:
+            time_window = self.time
+        result = 0.0
+        for u in self.users.values():
+            result += u.get_pkt_loss_rate(time_window=time_window)
+        return result/len(self.users)
+    
+    def get_pkt_sent_thr(self, time_window:float) -> float:
+        if len(self.users) == 0:
+            return 0
+        if time_window < 0:
+            raise Exception("Time window must be positive")
+        if self.time == 0:
+            raise Exception("The simulation did not start yet")
+        if self.time - time_window < 0:
+            time_window = self.time
+        result = 0.0
+        for u in self.users.values():
+            result += u.get_pkt_sent_thr(time_window=time_window)
+        return result/len(self.users)
+
+    def get_pkt_arriv_thr(self, time_window:float) -> float:
+        if len(self.users) == 0:
+            return 0
+        if time_window < 0:
+            raise Exception("Time window must be positive")
+        if self.time == 0:
+            raise Exception("The simulation did not start yet")
+        if self.time - time_window < 0:
+            time_window = self.time
+        result = 0.0
+        for u in self.users.values():
+            result += u.get_pkt_arriv_thr(time_window=time_window)
+        return result/len(self.users)
+    
     def __str__(self) -> str:
         return json.dumps(self.__dict__, cls=Encoder, indent=2)
 

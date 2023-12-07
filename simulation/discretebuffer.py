@@ -13,18 +13,17 @@ class DiscreteBuffer:
         time: float,
         interval: float,
         max_lat: float,
-        packet_size: int
     ) -> None:
         self.time = time
         self.interval = interval
         self.max_lat = max_lat
-        self.packet_size = packet_size
         
         self.buff = [0]*int(np.ceil(self.max_lat/self.interval))
         for pkt in list(real_buff):
             i = int(pkt.calculate_waited(self.time)/self.interval)
             if i == len(self.buff): # Case waited == max_lat
                 i -= 1
+            print(pkt, time)
             self.buff[i] += 1
     
     def __str__(self) -> str:

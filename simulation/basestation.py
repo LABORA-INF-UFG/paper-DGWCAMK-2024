@@ -15,13 +15,11 @@ class BaseStation:
         id: int,
         time: float,
         scheduler: InterSliceScheduler,
-        rb_bandwidth: float,
         rng:np.random.BitGenerator,
     ) -> None:
         self.id = id
         self.time = time
         self.scheduler = scheduler
-        self.rb_bandwidth = rb_bandwidth
         self.rng = rng
         self.slices: Dict[int, Slice] = {}
         self.rbgs:List[RBG] = []
@@ -45,12 +43,12 @@ class BaseStation:
     def add_rbg(self, rbg:RBG) -> None:
         self.rbgs.append(rbg)
 
-    def generate_rbgs(self, n_rbgs: int, rbs_per_rbg: int) -> None:
+    def generate_rbgs(self, n_rbgs: int, rbs_per_rbg: int, rb_bandwidth: float) -> None:
         rb_id = 0
         for rbg_id in range(n_rbgs):
             rbs: List[RB] = []
             for _ in range(rbs_per_rbg):
-                rbs.append(RB(id=rb_id, bandwidth=self.rb_bandwidth))
+                rbs.append(RB(id=rb_id, bandwidth=rb_bandwidth))
             rb_id += 1
             self.add_rbg(RBG(id=rbg_id, rbs=rbs))
 
@@ -70,13 +68,14 @@ class BaseStation:
     def transmit(self, time_end: float) -> None:
         if len(self.rbgs) == 0:
             raise Exception("Basestation {} cannot transmit because it has no RBGs".format(self.id))
-        self.schedule_rbgs()
         for s in self.slices.values():
             s.transmit(time_end=time_end)
         self.time = time_end
     
     def schedule_rbgs(self) -> None:
         self.scheduler.schedule(rbgs=self.rbgs, slices=self.slices)
+        for s in self.slices.values():
+            s.schedule_rbgs()
 
     def __str__(self) -> str:
         return json.dumps(self.__dict__, cls=Encoder, indent=2)

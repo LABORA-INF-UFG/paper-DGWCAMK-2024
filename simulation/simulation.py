@@ -36,19 +36,21 @@ class Simulation:
     def add_basestation(
         self,
         inter_scheduler:InterSliceScheduler,
-        n_rbgs: int,
+        bandwidth: float,
         rbs_per_rbg: int,
     ) -> int:
         self.basestations[self.basestation_id] = BaseStation(
             id=self.basestation_id,
             time=self.time,
             scheduler=inter_scheduler,
-            rb_bandwidth=self.rb_bandwidth,
             rng=self.rng
         )
+        n_rbs = int(bandwidth/self.rb_bandwidth)
+        n_rbgs = int(n_rbs/rbs_per_rbg)
         self.basestations[self.basestation_id].generate_rbgs(
             n_rbgs=n_rbgs,
-            rbs_per_rbg=rbs_per_rbg
+            rbs_per_rbg=rbs_per_rbg,
+            rb_bandwidth=self.rb_bandwidth
         )
         basestation_id = self.basestation_id
         self.basestation_id += 1
@@ -91,6 +93,10 @@ class Simulation:
         for bs in self.basestations.values():
             bs.arrive_pkts(time_end=self.time+self.TTI)
     
+    def schedule_rbgs(self) -> None:
+        for bs in self.basestations.values():
+            bs.schedule_rbgs() 
+
     def transmit(self) -> None:
         for bs in self.basestations.values():
             bs.transmit(time_end=self.time+self.TTI)
@@ -187,6 +193,7 @@ if __name__ == "__main__":
 
     for _ in range(2000): # Running 2000 TTIs = 2s
         sim.arrive_packets()
+        sim.schedule_rbgs()
         sim.transmit()
     
     print(sim)
