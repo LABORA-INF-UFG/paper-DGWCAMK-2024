@@ -1,9 +1,9 @@
 import json
 from collections import deque
 
-from packet import Packet
-from jsonencoder import Encoder
-from discretebuffer import DiscreteBuffer
+from simulation.packet import Packet
+from simulation.jsonencoder import Encoder
+from simulation.discretebuffer import DiscreteBuffer
 
 class BufferConfiguration:
     def __init__(

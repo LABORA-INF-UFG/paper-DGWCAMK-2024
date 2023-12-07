@@ -3,10 +3,10 @@ from typing import List
 from typing import Dict
 import json
 
-from jsonencoder import Encoder
-from rbg import RBG
-from buffer import Buffer, BufferConfiguration
-from flow import Flow, FlowConfiguration
+from simulation.jsonencoder import Encoder
+from simulation.rbg import RBG
+from simulation.buffer import Buffer, BufferConfiguration
+from simulation.flow import Flow, FlowConfiguration
 
 class UserConfiguration:
     def __init__(
@@ -32,13 +32,13 @@ class User:
         self.rng = rng
         self.config = config
         self.pkt_size = config.pkt_size
+        self.SE = None # bits/s.Hz
+        self.requirements = None
         self.buff = Buffer(time=time, config=self.config.buff_config)
         self.flow = Flow(time=time, config=self.config.flow_config,rng=self.rng)
         self.rbgs: List[RBG] = []
-        self.SE = None # bits/s.Hz
-        self.requirements = None
     
-    def __get_actual_throughput(self) -> float:
+    def get_actual_throughput(self) -> float:
         if self.SE is None:
             raise Exception("Spectral Efficiency not defined for User {}".format(self.id))
         total_bandwidth = 0.0
@@ -50,7 +50,7 @@ class User:
         self.flow.generate_and_arrive_pkts(time_end, self.buff, pkt_size=self.pkt_size)
 
     def transmit(self, time_end:float):
-        self.buff.transmit(time_end=time_end, throughput=self.__get_actual_throughput())
+        self.buff.transmit(time_end=time_end, throughput=self.get_actual_throughput())
         self.time = time_end
         self.flow.set_time(self.time)
 

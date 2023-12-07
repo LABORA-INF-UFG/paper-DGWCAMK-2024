@@ -3,8 +3,8 @@ import numpy as np
 from collections import deque
 from typing import List
 
-from jsonencoder import Encoder
-from packet import Packet
+from simulation.jsonencoder import Encoder
+from simulation.packet import Packet
 
 class DiscreteBuffer:
     def __init__(

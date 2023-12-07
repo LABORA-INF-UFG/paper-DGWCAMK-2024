@@ -1,6 +1,6 @@
 import json
 
-from jsonencoder import Encoder
+from simulation.jsonencoder import Encoder
 
 class Packet:
     def __init__(

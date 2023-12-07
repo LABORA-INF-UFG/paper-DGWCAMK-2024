@@ -2,9 +2,10 @@ from abc import ABC, abstractmethod
 from typing import Dict, List
 import json
 
-from jsonencoder import Encoder
-from rbg import RBG
-from slice import Slice
+
+from simulation.jsonencoder import Encoder
+from simulation.rbg import RBG
+from simulation.slice import Slice
 
 class InterSliceScheduler(ABC):
     @abstractmethod

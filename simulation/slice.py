@@ -3,13 +3,13 @@ from typing import Dict
 from typing import List
 import json
 
-from jsonencoder import Encoder
-from rbg import RBG
-from rb import RB
-from buffer import Buffer, BufferConfiguration
-from flow import Flow, FlowConfiguration
-from user import User, UserConfiguration
-from intrasched import IntraSliceScheduler
+from simulation.jsonencoder import Encoder
+from simulation.rbg import RBG
+from simulation.rb import RB
+from simulation.buffer import Buffer, BufferConfiguration
+from simulation.flow import Flow, FlowConfiguration
+from simulation.user import User, UserConfiguration
+from simulation.intrasched import IntraSliceScheduler
 
 class SliceConfiguration:
     def __init__(
@@ -38,8 +38,8 @@ class Slice:
         self.user_config = config.user_config
         self.scheduler = scheduler
         self.rng = rng
-        self.rbgs: List[RBG] = []
         self.users: Dict[int, User] = dict()
+        self.rbgs: List[RBG] = []
         
     def generate_and_add_users(self, user_ids: List[int]) -> None:
         for id in user_ids:

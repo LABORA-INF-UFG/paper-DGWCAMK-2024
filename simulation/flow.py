@@ -1,9 +1,9 @@
 import numpy as np
 import json
 
-from jsonencoder import Encoder
-from buffer import Buffer
-from packet import Packet
+from simulation.jsonencoder import Encoder
+from simulation.buffer import Buffer
+from simulation.packet import Packet
 
 class FlowConfiguration:
     def __init__(
@@ -25,12 +25,11 @@ class Flow:
         self.type = config.type
         self.throughput = config.throughput
         self.rng = rng
-        self.__generate_bits = self.__choose_generation_type()
         self.part_pkt_bits = 0.0
 
-    def __choose_generation_type(self): # Returns function
+    def __generate_bits(self, time_interval:float): # Returns function
         if self.type == "poisson":
-            return self.__generate_poisson
+            return self.__generate_poisson(time_interval=time_interval)
         else:
             raise Exception("Flow type not defined")
 
@@ -41,7 +40,6 @@ class Flow:
         bits = self.__generate_bits(time_end - self.time) + self.part_pkt_bits
         pkts = int(bits/pkt_size)
         self.part_pkt_bits = bits - pkts*pkt_size
-        self.time = time_end
         return pkts
     
     def set_throughput(self, throughput:float):
@@ -55,6 +53,7 @@ class Flow:
                     arrive_ts=self.time
                 )
             )
+        self.time = time_end
     
     def set_time (self, time:float) -> None:
         self.time = time

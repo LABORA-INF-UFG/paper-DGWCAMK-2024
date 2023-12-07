@@ -1,8 +1,8 @@
 from typing import List
 import json
 
-from jsonencoder import Encoder
-from rb import RB
+from simulation.jsonencoder import Encoder
+from simulation.rb import RB
 
 class RBG:
     def __init__(
