@@ -20,13 +20,15 @@ class RoundRobin(InterSliceScheduler):
         self.offset = offset
     
     def schedule(self, rbgs:List[RBG], slices:Dict[int, Slice]):
-        slice_list: List[Slice] = list(slices.values())
+        ids = []
+        for s in slices.values(): # Considering the number of users per slice
+            ids.extend([s.id]*len(s.users))
         for s in slices.values():
             s.clear_rbg_allocation()
-        self.offset %= len(slice_list)
+        self.offset %= len(ids)
         for r in rbgs:
-            slice_list[self.offset].allocate_rbg(r)
-            self.offset = (self.offset + 1) % len(slice_list)
+            slices[ids[self.offset]].allocate_rbg(r)
+            self.offset = (self.offset + 1) % len(ids)
     
     def __str__(self) -> str:
         return json.dumps(self.__dict__, cls=Encoder, indent=2)
