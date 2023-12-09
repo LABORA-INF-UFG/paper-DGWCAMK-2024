@@ -120,7 +120,7 @@ if __name__ == "__main__":
     SE_file_base_string = "se/trial{}_f{}_ue{}.npy"
     for u in sim.users:
         SE_file_string = SE_file_base_string.format(SE_trial, SE_sub_carrier, u+1)
-        SEs[u] = np.load(SE_file_string).tolist()
+        SEs[u] = list(np.load(SE_file_string)*3)
 
     def set_users_spectral_efficiency(users:Dict[int, User], SEs: Dict[int, List[float]]):
         for u in users.values():
