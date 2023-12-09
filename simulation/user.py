@@ -1,44 +1,64 @@
 import numpy as np
-from typing import List
-from typing import Dict
+from typing import List, Dict, Tuple
 import json
+from copy import copy
 
 from simulation.jsonencoder import Encoder
 from simulation.rbg import RBG
-from simulation.buffer import Buffer, BufferConfiguration
+from simulation.buffer import BufferConfiguration, DiscreteBuffer
 from simulation.flow import Flow, FlowConfiguration
 from simulation.packet import Packet
 
 class UserConfiguration:
     def __init__(
         self,
-        buff_config: BufferConfiguration,
-        flow_config: FlowConfiguration,
-        pkt_size: int,
+        max_lat: int, # TTIs
+        buffer_size: int, # bits
+        pkt_size: int, # bits
+        flow_type: str, # "poisson"
+        flow_throughput: float, # bits/s
     ) -> None:
-        self.buff_config = buff_config
-        self.flow_config = flow_config
-        self.pkt_size = pkt_size
+        self.buff_config = BufferConfiguration(
+            max_lat=max_lat,
+            buffer_size=buffer_size,
+            pkt_size=pkt_size,
+        )
+        self.flow_config = FlowConfiguration(
+            type=flow_type,
+            pkt_size=pkt_size,
+            throughput=flow_throughput
+        
+        )
 
 class User:
     def __init__(
         self,
         id: int,
-        time: float, # s
+        TTI: float, # s
         config: UserConfiguration,
-        rng: np.random.BitGenerator
+        rng: np.random.BitGenerator,
     ) -> None:
         self.id = id
-        self.time = time
-        self.rng = rng
         self.config = config
-        self.pkt_size = config.pkt_size
+        self.rng = rng
+        self.step = 0
+        self.TTI = TTI
+        self.buff = DiscreteBuffer(TTI=TTI, config=config.buff_config)
+        self.flow = Flow(TTI=TTI, config=config.flow_config, rng=self.rng)
         self.SE = None # bits/s.Hz
         self.requirements = None
-        self.buff = Buffer(time=time, config=self.config.buff_config)
-        self.flow = Flow(time=time, config=self.config.flow_config,rng=self.rng)
         self.rbgs: List[RBG] = []
+        self.hist_allocated_throughput:List[float] = []
+        self.hist_n_allocated_RBGs:List[int] = []
+        self.hist_spectral_efficiency:List[float] = []
     
+    def __hist_update_after_transmit(self) -> None:
+        self.hist_allocated_throughput.append(self.get_actual_throughput())
+        self.hist_n_allocated_RBGs.append(len(self.rbgs))
+    
+    def __hist_update_after_arrive(self) -> None:
+        self.hist_spectral_efficiency.append(self.SE)
+
     def get_actual_throughput(self) -> float:
         if self.SE is None:
             raise Exception("Spectral Efficiency not defined for User {}".format(self.id))
@@ -47,23 +67,19 @@ class User:
             total_bandwidth += rbg.bandwidth
         return total_bandwidth * self.SE
     
-    def arrive_pkts(self, time_end:float):
-        pkts: List[Packet] = self.flow.generate_pkts(
-            time_end=time_end,
-            buffer=self.buff,
-            pkt_size=self.pkt_size
-        )
-        self.buff.arrive_pkts(pkts)
+    def arrive_pkts(self):
+        self.buff.arrive_pkts(self.flow.generate_pkts())
+        self.__hist_update_after_arrive()
 
-    def transmit(self, time_end:float):
-        self.buff.transmit(time_end=time_end, throughput=self.get_actual_throughput())
-        self.time = time_end
-        self.flow.set_time(self.time)
+    def transmit(self):
+        self.buff.transmit(throughput=self.get_actual_throughput())
+        self.__hist_update_after_transmit()
+        self.step += 1
 
     def set_spectral_efficiency(self, SE: float) -> None:
         self.SE = SE
 
-    def set_demand_throughput(self, throughput:float):
+    def set_flow_throughput(self, throughput:float):
         self.flow.set_throughput(throughput)
 
     def set_requirements(self, requirements: Dict[str, float]) -> None:
@@ -81,40 +97,27 @@ class User:
     def get_avg_buffer_latency(self) -> float:
         return self.buff.get_avg_buffer_latency()
     
-    def get_pkt_loss_rate(self, time_window:float) -> float:
-        if time_window <= 0:
-            raise Exception("Time window must be positive")
-        if self.time == 0:
-            raise Exception("The simulation did not start yet")
-        if self.time - time_window < 0:
-            time_window = self.time
-        dropp = self.buff.get_dropp_pkts_bits(time_window)
-        total = self.buff.get_arriv_and_buff_pkts_bits(time_window)
-        return dropp/total
+    def get_pkt_loss_rate(self, window:int) -> float:
+        return self.buff.get_pkt_loss_rate(window=window)
     
-    def get_pkt_sent_thr(self, time_window:float) -> float:
-        if time_window <= 0:
-            raise Exception("Time window must be positive")
-        if self.time == 0:
-            raise Exception("The simulation did not start yet")
-        if self.time - time_window < 0:
-            time_window = self.time
-        bits = self.buff.get_sent_pkts_bits(time_window=time_window)
-        if len(self.buff.pkt_buff) > 0:
-            bits += self.buff.pkt_buff[0].sent_bits
-        return bits/time_window
+    def get_sent_thr(self, window:int) -> float:
+        return self.buff.get_sent_thr(window)
 
-    def get_pkt_arriv_thr(self, time_window:float) -> float:
-        if time_window <= 0:
-            raise Exception("Time window must be positive")
-        if self.time == 0:
-            raise Exception("The simulation did not start yet")
-        if self.time - time_window < 0:
-            time_window = self.time
-        bits = self.buff.get_arriv_pkts_bits(time_window=time_window)
-        if len(self.buff.pkt_buff) > 0:
-            bits += self.buff.pkt_buff[0].sent_bits
-        return bits/time_window
+    def get_arriv_thr(self, window:int) -> float:
+        return self.buff.get_arriv_thr(window)
+    
+    def get_buffer_array(self):
+        return copy(self.buff.buff)
+    
+    def get_long_term_thr(self, window:int) -> float:
+        if window < 1:
+            raise Exception("window must be >= 1")
+        return sum(self.hist_allocated_throughput[-window:])/window
+    
+    def get_fifth_perc_thr(self, window:int) -> float:
+        if window < 1:
+            raise Exception("window must be >= 1")
+        return np.percentile(self.hist_allocated_throughput[-window:], 5)
 
     def __str__(self) -> str:
         return json.dumps(self.__dict__, cls=Encoder, indent=2)

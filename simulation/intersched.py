@@ -9,7 +9,7 @@ from simulation.slice import Slice
 
 class InterSliceScheduler(ABC):
     @abstractmethod
-    def schedule(self, rbgs:List[RBG], slices=Dict[int, Slice]):
+    def schedule(self, rbgs:List[RBG], slices:Dict[int, Slice], TTI:float):
         raise Exception("Called abstract InterSliceScheduler method")
 
 class RoundRobin(InterSliceScheduler):
@@ -19,7 +19,7 @@ class RoundRobin(InterSliceScheduler):
     ) -> None:
         self.offset = offset
     
-    def schedule(self, rbgs:List[RBG], slices:Dict[int, Slice]):
+    def schedule(self, rbgs:List[RBG], slices:Dict[int, Slice], TTI:float):
         ids = []
         for s in slices.values(): # Considering the number of users per slice
             ids.extend([s.id]*len(s.users))

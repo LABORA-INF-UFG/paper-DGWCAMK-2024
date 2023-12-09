@@ -2,3 +2,4 @@
 - Todos os resultados devem ser passados para uma tabela Pandas
 - O plotter gerará gráficos utilizando essa tabela
 - O tempo do simulador SEMPRE começa em 0
+- max_lat deve ser múltiplo do TTI

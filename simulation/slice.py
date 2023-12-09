@@ -5,9 +5,6 @@ import json
 
 from simulation.jsonencoder import Encoder
 from simulation.rbg import RBG
-from simulation.rb import RB
-from simulation.buffer import Buffer, BufferConfiguration
-from simulation.flow import Flow, FlowConfiguration
 from simulation.user import User, UserConfiguration
 from simulation.intrasched import IntraSliceScheduler
 
@@ -26,33 +23,37 @@ class Slice:
     def __init__(
         self,
         id: int,
-        time:float, # s
         config: SliceConfiguration,
         scheduler: IntraSliceScheduler,
+        TTI:float, # s
         rng: np.random.BitGenerator,
     ) -> None:
         self.id = id
-        self.time = time
         self.type = config.type
         self.requirements = config.requirements
         self.user_config = config.user_config
         self.scheduler = scheduler
+        self.TTI = TTI
         self.rng = rng
+        self.step = 0
         self.users: Dict[int, User] = dict()
         self.rbgs: List[RBG] = []
         
+        
     def generate_and_add_users(self, user_ids: List[int]) -> None:
         for id in user_ids:
-            self.add_user(user_id=id, user_config=self.user_config)
+            self.add_user(user_id=id)
 
-    def add_user(self, user_id: int, user_config: UserConfiguration) -> None:
+    def add_user(self, user_id: int, user_config: UserConfiguration = None) -> None:
         if user_id in self.users.values():
             raise Exception("User {} is already assigned to slice {}".format(user_id, self.id))
+        if user_config is None:
+            user_config = self.user_config
         self.users[user_id] = User(
             id=user_id,
-            time=self.time,
+            TTI=self.TTI,
             config=user_config,
-            rng=self.rng
+            rng=self.rng,
         )
         self.users[user_id].set_requirements(requirements=self.requirements)
 
@@ -64,14 +65,14 @@ class Slice:
         for u in self.users.values():
             u.set_demand_throughput(throughput=throughput)
     
-    def arrive_pkts(self, time_end:float) -> None:
+    def arrive_pkts(self) -> None:
         for u in self.users.values():
-            u.arrive_pkts(time_end=time_end)
+            u.arrive_pkts()
     
-    def transmit(self, time_end:float) -> None:
+    def transmit(self) -> None:
         for u in self.users.values():
-            u.transmit(time_end=time_end)
-        self.time = time_end
+            u.transmit()
+        self.step += 1
     
     def allocate_rbg(self, rbg:RBG) -> None:
         self.rbgs.append(rbg)
@@ -98,114 +99,29 @@ class Slice:
             result += u.get_avg_buffer_latency()
         return result/len(self.users)
     
-    def get_pkt_loss_rate(self, time_window:float) -> float:
+    def get_pkt_loss_rate(self, window:int) -> float:
         if len(self.users) == 0:
             return 0
-        if time_window < 0:
-            raise Exception("Time window must be positive")
-        if self.time == 0:
-            raise Exception("The simulation did not start yet")
-        if self.time - time_window < 0:
-            time_window = self.time
         result = 0.0
         for u in self.users.values():
-            result += u.get_pkt_loss_rate(time_window=time_window)
+            result += u.get_pkt_loss_rate(window)
         return result/len(self.users)
     
-    def get_pkt_sent_thr(self, time_window:float) -> float:
+    def get_pkt_sent_thr(self, window:int) -> float:
         if len(self.users) == 0:
             return 0
-        if time_window < 0:
-            raise Exception("Time window must be positive")
-        if self.time == 0:
-            raise Exception("The simulation did not start yet")
-        if self.time - time_window < 0:
-            time_window = self.time
         result = 0.0
         for u in self.users.values():
-            result += u.get_pkt_sent_thr(time_window=time_window)
+            result += u.get_sent_thr(window)
         return result/len(self.users)
 
-    def get_pkt_arriv_thr(self, time_window:float) -> float:
+    def get_pkt_arriv_thr(self, window:int) -> float:
         if len(self.users) == 0:
             return 0
-        if time_window < 0:
-            raise Exception("Time window must be positive")
-        if self.time == 0:
-            raise Exception("The simulation did not start yet")
-        if self.time - time_window < 0:
-            time_window = self.time
         result = 0.0
         for u in self.users.values():
-            result += u.get_pkt_arriv_thr(time_window=time_window)
+            result += u.get_arriv_thr(window)
         return result/len(self.users)
     
     def __str__(self) -> str:
         return json.dumps(self.__dict__, cls=Encoder, indent=2)
-
-if __name__ == "__main__":
-    from intrasched import RoundRobin
-
-    time = 0.0 # s
-    rng = np.random.default_rng()
-
-    rbg_list: List[RBG] = []
-    for i in range(5):
-        rb_list: List[RB] = []
-        for j in range(4):
-            rb_list.append(RB(id=j, bandwidth=1e6)) # 1Mhz/RB
-        rbg_list.append(RBG(id=i,rbs=rb_list)) # 4RBs/RBG
-
-    user_config = UserConfiguration(
-        buff_config=BufferConfiguration(
-            max_lat=0.1, # s
-            buffer_size=1024*1024, # bits
-        ),
-        flow_config=FlowConfiguration(
-            type="poisson",
-            throughput=5e6, # bits
-        ),
-        pkt_size=1024 # bits
-    )
-    
-    slice_config = SliceConfiguration(
-        type="embb",
-        requirements={
-            "latency": 0.5, # s
-            "throughput": 5e6, # bits/s
-            "packet_loss": 0.2, # ratio
-        },
-        user_config=user_config
-    )
-
-    s = Slice(
-        id=0,
-        time=time,
-        config=slice_config,
-        scheduler=RoundRobin(),
-        rng=rng
-    )
-
-    for rbg in rbg_list:
-        s.allocate_rbg(rbg)
-
-    s.generate_and_add_users(range(3)) # Generating 3 users
-    
-    for u in s.users.values():
-        u.set_spectral_efficiency(1.0) # bits/s.Hz
-
-    time += 1e-3 # 1ms
-    s.arrive_pkts(time_end=time)
-    s.schedule_rbgs()
-    s.transmit(time_end=time)
-
-    s.clear_rbg_allocation()
-    for rbg in rbg_list[0:3]:
-        s.allocate_rbg(rbg)
-
-    time += 1e-3 # 1ms
-    s.arrive_pkts(time_end=time)
-    s.schedule_rbgs()
-    s.transmit(time_end=time)
-
-    print(s)
