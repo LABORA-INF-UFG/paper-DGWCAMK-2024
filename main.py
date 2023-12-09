@@ -1,15 +1,15 @@
 import numpy as np
 from tqdm import tqdm
+from typing import List, Dict
 
 from simulation import intersched, intrasched
-from simulation.buffer import BufferConfiguration
-from simulation.user import UserConfiguration
-from simulation.flow import FlowConfiguration
+from simulation.user import UserConfiguration, User
 from simulation.slice import SliceConfiguration
 from simulation.simulation import Simulation
 
 if __name__ == "__main__":
     
+    # Configuring slices
 
     embb_config = SliceConfiguration(
         type="embb",
@@ -19,15 +19,11 @@ if __name__ == "__main__":
             "pkt_loss": 0.2, # ratio
         },
         user_config=UserConfiguration(
-            buff_config=BufferConfiguration(
-                max_lat=0.1, # s
-                buffer_size=1024*8192*8, # bits
-            ),
-            flow_config=FlowConfiguration(
-                type="poisson",
-                throughput=15e6, # bits
-            ),
+            max_lat=100, # TTIs
+            buffer_size=1024*8192*8, # bits
             pkt_size=1500*8, # bits
+            flow_type="poisson",
+            flow_throughput=15e6, # bits/s
         )
     )
 
@@ -39,15 +35,11 @@ if __name__ == "__main__":
             "pkt_loss": 1e-5, # ratio
         },
         user_config=UserConfiguration(
-            buff_config=BufferConfiguration(
-                max_lat=0.1, # s
-                buffer_size=1024*8192*8, # bits
-            ),
-            flow_config=FlowConfiguration(
-                type="poisson",
-                throughput=1e6, # bits
-            ),
+            max_lat=100, # TTIs
+            buffer_size=1024*8192*8, # bits
             pkt_size=500*8, # bits
+            flow_type="poisson",
+            flow_throughput=1e6, # bits/s
         )
     )
     
@@ -58,17 +50,15 @@ if __name__ == "__main__":
             "fifth_perc_pkt_thr": 5e6, # bits/s
         },
         user_config=UserConfiguration(
-            buff_config=BufferConfiguration(
-                max_lat=0.1, # s
-                buffer_size=1024*8192*8, # bits
-            ),
-            flow_config=FlowConfiguration(
-                type="poisson",
-                throughput=15e6, # bits
-            ),
+            max_lat=100, # TTIs
+            buffer_size=1024*8192*8, # bits
             pkt_size=1500*8, # bits
+            flow_type="poisson",
+            flow_throughput=15e6, # bits/s
         )
     )
+
+    # Starting the simulation and basestation
 
     sim = Simulation(
         option_5g=0, # TTI = 1ms
@@ -81,6 +71,8 @@ if __name__ == "__main__":
         rbs_per_rbg=4,
         bandwidth=100e6 # 100MHz
     )
+
+    # Instantiating slices
 
     embb = sim.add_slice(
         basestation_id=basestation,
@@ -100,6 +92,8 @@ if __name__ == "__main__":
         intra_scheduler=intrasched.RoundRobin()
     )
 
+    # Instantiating users
+
     embb_users = sim.add_users(
         basestation_id=basestation,
         slice_id=embb,
@@ -118,37 +112,53 @@ if __name__ == "__main__":
         n_users=4
     )
 
-    for s in sim.basestations[basestation].slices.values():
-        for u in s.users.values():
-            u.set_spectral_efficiency(1.0) # bit/s.Hz
+    # Loading the spectral efficiency for each user
+
+    SEs:Dict[int, List[float]] = dict()
+    SE_trial = 1 # 1, ..., 50
+    SE_sub_carrier = 2 # 1, 2
+    SE_file_base_string = "se/trial{}_f{}_ue{}.npy"
+    for u in sim.users:
+        SE_file_string = SE_file_base_string.format(SE_trial, SE_sub_carrier, u+1)
+        SEs[u] = np.load(SE_file_string).tolist()
+
+    def set_users_spectral_efficiency(users:Dict[int, User], SEs: Dict[int, List[float]]):
+        for u in users.values():
+            u.set_spectral_efficiency(SEs[u.id][u.step])
 
     # Running 2000 TTIs = 2s
+
     TTIs = 2000
     for _ in tqdm(range(TTIs), leave=False, desc="TTIs"):
-        if _ == 1970:
+        if _ == 1900:
             print("a")
+        set_users_spectral_efficiency(users=sim.users, SEs=SEs)
         sim.arrive_packets()
         sim.schedule_rbgs()
         sim.transmit()
     # print(sim)
     
-    metric_time_window = 20 *1e-3 # 10ms
+    # Printing metrics
+
+    window = 20 # 10ms
     for s in sim.basestations[basestation].slices.values():
         print("\nMetrics for {} slice".format(s.type))
         print("Average buffer latency: {:.2f}ms".format(s.get_avg_buffer_latency()*1e3))
         print("Buffer occupancy: {:.2f}%".format(s.get_buffer_occupancy()*100))
         print("Arrived throughput in the last {}ms: {:.2f}Mbps".format(
-            metric_time_window*1e3,
-            s.get_pkt_arriv_thr(time_window=metric_time_window)/1e6 # bits/s -> Mbps
+            window,
+            s.get_pkt_arriv_thr(window)/1e6 # bits/s -> Mbps
         ))
         print("Sent throughput in the last {}ms: {:.2f}Mbps".format(
-            metric_time_window*1e3,
-            s.get_pkt_sent_thr(time_window=metric_time_window)/1e6 # bits/s -> Mbps
+            window,
+            s.get_pkt_sent_thr(window)/1e6 # bits/s -> Mbps
         ))
         print("Packet loss rate for the last {}ms: {:.2f}%".format(
-            metric_time_window*1e3,
-            s.get_pkt_loss_rate(time_window=metric_time_window)*100
+            window,
+            s.get_pkt_loss_rate(window)*100
         ))
+
+    # Saving simulation data
 
     import pickle
     sim_data_file = open("simulation_data.pickle", "wb")
