@@ -39,12 +39,19 @@ class DiscreteBuffer():
         self.hist_sent_pkts: List[int] = []
         self.hist_buff_pkts: List[int] = []
     
+    def get_arriv_pkts(self, window:int):
+        if window < 1:
+            raise Exception("window must be >= 1")
+        if window > self.step + 1:  
+            window = self.step + 1
+        return sum(self.hist_arriv_pkts[-window:])
+    
     def get_arriv_pkts_bits(self, window:int):
         if window < 1:
             raise Exception("window must be >= 1")
         if window > self.step + 1:  
             window = self.step + 1
-        return sum(self.hist_arriv_pkts[-window:]) * self.pkt_size
+        return self.get_arriv_pkts(window) * self.pkt_size
 
     def get_sent_pkts_bits(self, window:int):
         if window < 1:

@@ -3,7 +3,7 @@ from typing import Dict, List
 import json
 
 from simulation.jsonencoder import Encoder
-from simulation.intersched import InterSliceScheduler
+import simulation.intersched as intersched
 from simulation.basestation import BaseStation
 from simulation.slice import SliceConfiguration, Slice
 from simulation.user import User
@@ -34,13 +34,14 @@ class Simulation:
     
     def add_basestation(
         self,
-        inter_scheduler:InterSliceScheduler,
+        inter_scheduler:intersched.InterSliceScheduler,
         bandwidth: float,
         rbs_per_rbg: int,
     ) -> int:
         self.basestations[self.basestation_id] = BaseStation(
             id=self.basestation_id,
             TTI=self.TTI,
+            rb_bandwidth=self.rb_bandwidth,
             scheduler=inter_scheduler,
             rng=self.rng
         )

@@ -91,6 +91,46 @@ class User:
     def clear_rbg_allocation(self) -> None:
         self.rbgs: List[RBG] = []
 
+    def get_buffer_pkt_capacity(self) -> int:
+        return int(self.buff.buffer_size/self.buff.pkt_size)
+
+    def get_pkt_size(self) -> int:
+        return self.buff.pkt_size
+
+    def get_last_arriv_pkts(self) -> int:
+        return self.buff.hist_arriv_pkts[-1]
+    
+    def get_n_buff_pkts_waited_i_TTIs(self, i:int) -> int:
+        return self.buff.buff[i]
+
+    def get_max_lat(self) -> int:
+        return self.buff.max_lat
+    
+    def get_buff_pkts(self, step: int) -> int:
+        return self.buff.hist_buff_pkts[step]
+    
+    def get_arriv_pkts(self, window:int):
+        return self.buff.get_arriv_pkts(window)
+
+    def get_dropp_pkts(self, window: int) -> int:
+        return self.buff.get_dropp_pkts_bits(window)/self.buff.pkt_size
+    
+    def get_agg_thr(self, window: int) -> float:
+        if window < 1:
+            raise Exception("window must be >= 1")
+        return sum(self.hist_allocated_throughput[-window:])
+
+    def get_min_thr(self, window: int) -> float:
+        if window < 1:
+            raise Exception("window must be >= 1")
+        return min(self.hist_allocated_throughput[-window:])
+    
+    def get_part_sent_bits(self) -> float:
+        return self.buff.partial_pkt_bits
+    
+    def get_buff_pkts_now(self) -> int:
+        return int(self.buff.get_buff_bits/self.buff.pkt_size)
+
     def get_buffer_occupancy(self) -> float:
         return self.buff.get_buffer_occupancy()
 

@@ -1,43 +1,31 @@
-from typing import Dict
+from typing import Dict, List
 
 from pyomo import environ as pyo
-from simulation.simulation import Simulation
-from simulation.discretebuffer import DiscreteBuffer
+from simulation.slice import Slice
+from simulation.user import User
+from simulation.rbg import RBG
 
-def optimize(sim: Simulation, method: str, allocate_all_resources = False, verbose=False):
-    '''
-    Function for building and solving the linear model.
-
-    Parameters
-    ----------
-    sim: Simulation
-        Input data for building the model.
-    
-    method: str
-        Lower case string with the solver's name (e.g. cplex or gurobi)  
-    
-    allocate_all_resources: bool, optional
-        Flag that indicates how to constraint the slice RBGs. If true. then sum(R_s) == R.
-        Else, sum(R_s) <= R and the allocation is minimized.
-
-    verbose: bool, optional
-        Flag for verbose solving.
-    
-    Returns
-    -------
-    ConcreteModel
-        The built and solved model with values accessible by using m.var_name.value attribute.
-    Unknow Type
-        Results from the solving process.
-    '''
+def optimize(
+    slices: Dict[int, Slice],
+    users: Dict[int, User],
+    rbgs: List[RBG],
+    rb_bandwidth: float,
+    window_size: int,
+    e: float,
+    method: str,
+    allocate_all_resources = False,
+    verbose=False
+):
     if verbose:
         print ("Building model...")
 
-    # PREPROCESSING
-    u_buff:Dict[int, DiscreteBuffer] = dict()
-    for u in sim.users.values():
-        u_buff[u.id] = u.get_discrete_buffer()
-    l_max = len(u_buff.values()[0].buff)
+    if len(users.values()) == 0:
+        raise Exception("No users to schedule")
+
+    l_max = users[0].get_max_lat()
+
+    if l_max < 2:
+        raise Exception("Maximum latency must be >= 2 TTIs")
 
     m = pyo.ConcreteModel()
 
@@ -46,33 +34,31 @@ def optimize(sim: Simulation, method: str, allocate_all_resources = False, verbo
     # ----
 
     # SET: S
-    m.S = pyo.Set(initialize = sim.slices.keys())
+    m.S = pyo.Set(initialize = slices.keys())
 
     # SET: S_rlp_
-    m.S_rlp = pyo.Set(initialize = [s.id for s in sim.slices.values() if s.type == "embb" or s.type == "urllc"])
+    m.S_rlp = pyo.Set(initialize = [s.id for s in slices.values() if s.type == "embb" or s.type == "urllc"])
     
     # SET: S_fg
-    m.S_fg = pyo.Set(initialize = [s.id for s in sim.slices.values() if s.type == "be"])
+    m.S_fg = pyo.Set(initialize = [s.id for s in slices.values() if s.type == "be"])
 
     # SET: U
-    m.U = pyo.Set(initialize = sim.users.keys())
+    m.U = pyo.Set(initialize = users.keys())
 
     # SET: U_rlp
-    m.U_rlp = pyo.Set(initialize = [u.id for s in m.S_rlp for u in sim.slices[s].users.keys()])
+    m.U_rlp = pyo.Set(initialize = [u for s in m.S_rlp for u in slices[s].users.keys()])
 
     # SET: U_fg
-    m.U_fg = pyo.Set(initialize = [u.id for s in m.S_fg for u in sim.slices[s].users.keys()])
+    m.U_fg = pyo.Set(initialize = [u for s in m.S_fg for u in slices[s].users.keys()])
 
-    # SET: i = 0, ..., l_{max}
-    for u in sim.users.values():
-        u.max
-    m.I = pyo.Set(initialize = range(len(u_buff.values()[0].buff)))
+    # SET: i = 0, ..., l_{max} -1 
+    m.I = pyo.Set(initialize = range(l_max))
 
-    # Set: i = 0, ..., l_{max} - 1
-    m.I_0_l_max_1 = pyo.Set(initialize = range(data.l_max))
+    # Set: i = 0, ..., l_{max} - 2
+    m.I_without_last = pyo.Set(initialize = range(l_max-1))
 
-    # Set: i = 1, ..., l_{max}
-    m.I_1_l_max = pyo.Set(initialize = range(1, data.l_max+1))
+    # Set: i = 1, ..., l_{max} -1
+    m.I_without_first = pyo.Set(initialize = range(1, l_max))
 
     # ----
     # VARS
@@ -103,27 +89,13 @@ def optimize(sim: Simulation, method: str, allocate_all_resources = False, verbo
     m.alpha_u = pyo.Var(m.U_rlp, domain=pyo.Binary)
 
     # VAR: delta_u_i for rlp users
-    m.delta_u_i = pyo.Var(m.U_rlp, m.I_1_l_max, domain=pyo.Binary)
+    m.delta_u_i = pyo.Var(m.U_rlp, m.I_without_first, domain=pyo.Binary)
 
     # VAR: beta_u for rlp users
     m.beta_u = pyo.Var(m.U_rlp, domain=pyo.Binary)
 
-    if data.n > 0:
-        # VAR: psi_u for fg users if n >= 1
-        m.psi_u = pyo.Var(m.U_fg, domain=pyo.Binary)
-
-    if data.n > 1:
-        # VAR: rho_u for fg users if n >= 2
-        m.rho_u = pyo.Var(m.U_fg, domain=pyo.Binary)
-
-        # VAR: lambda_u for fg users if n >= 2
-        m.lambda_u = pyo.Var(m.U_fg, domain=pyo.Binary)
-
-        # VAR: sigma_u for fg users if n >= 2
-        m.sigma_u = pyo.Var(m.U_fg, domain=pyo.Binary)
-
-        # VAR: omega_u for fg users if n >= 2
-        m.omega_u = pyo.Var(m.U_fg, domain=pyo.Binary)
+    # VAR: psi_u for fg users
+    m.psi_u = pyo.Var(m.U_fg, domain=pyo.Binary)
 
     # -----------
     # EXPRESSIONS
@@ -131,41 +103,27 @@ def optimize(sim: Simulation, method: str, allocate_all_resources = False, verbo
 
     # --------------- Global expressions
     
-    # EXP: V_r the upper bound for any r_s
-    V_r = data.B * max(data.users[u].SE[data.n] for u in m.U)
+    # EXP: V_r the upper bound for any r_s (bits/s)
+    V_r = sum(r.bandwidth for r in rbgs) * max(u.SE for u in users.values())
 
-    # EXP: V_T the upper bound for any T_u
-    V_T = V_r/data.PS + data.b_max
+    # EXP: V_T the upper bound for any T_u (packets)
+    V_T = max(V_r/u.get_pkt_size() + u.get_buffer_pkt_capacity() for u in users.values())
 
-    # EXP v_sent the lower bound for any sent_u_i - buff_u_i
-    v_sent = -data.b_max
+    # EXP v_sent the lower bound for any sent_u_i - buff_u_i (packets)
+    v_sent = -max(int(u.buff.buffer_size/u.buff.pkt_size) for u in users.values())
 
-    # EXP V_sent the upper bound for any sent_u_i - buff_u_i
-    V_sent = int(V_r/data.PS)
+    # EXP V_sent the upper bound for any sent_u_i - buff_u_i (packets)
+    V_sent = max(int(V_r/u.buff.pkt_size) for u in users.values())
 
-    # EXP: V_over the upper bound of any b_u_sup
-    V_over = data.b_max + max(data.users[u].hist_rcv[data.n] for u in m.U)
-
-
-    # --------------- Expressions for all slices
-
-    # R_s = dict()
-    # for s in m.S:
-    #     # EXP: R_s calculation for all slices
-    #     R_s[s] = m.a_s[s] * len(U_s[s])
+    # EXP: V_over the upper bound of any b_u_sup (packets)
+    V_over = max(u.get_buffer_pkt_capacity() + u.get_last_arriv_pkts() for u in users.values())
     
     # --------------- Expressions for all users
-
-    #R_u = dict()
+    
     r_u = dict()
     for u in m.U:
-        s = data.users[u].s
-        # EXP: R_u calculation for all users
-        #R_u[u] = R_s[s] / len(U_s[s])
-
-        # EXP: r_u calculation for all users
-        #r_u[u] = data.B * (R_u[u]/data.R) * data.users[u].SE[data.n] / 1e3
-        r_u[u] = data.B * (m.R_u[u]/data.R) * data.users[u].SE[data.n] / 1e3
+        # EXP: r_u calculation for all users (bits/s)
+        r_u[u] = sum(r.bandwidth for r in users[u].rbgs) * rb_bandwidth * users[u].SE
 
     # --------------- Expressions for rlp users
     
@@ -176,22 +134,22 @@ def optimize(sim: Simulation, method: str, allocate_all_resources = False, verbo
     p_u = dict()
     for u in m.U_rlp:
         for i in m.I:
-            # EXP: remain_u_i = buff_u_i - sent_u_i for rlp users
-            remain_u_i[u,i] = data.users[u].hist_buff[data.n][i] - m.sent_u_i[u,i]
+            # EXP: remain_u_i = buff_u_i - sent_u_i for rlp users (packets)
+            remain_u_i[u,i] = users[u].get_n_buff_pkts_waited_i_TTIs(i)- m.sent_u_i[u,i]
     
-        # EXP: b_u_sup for rlp users
-        b_u_sup[u] = data.users[u].hist_rcv[data.n] + sum(remain_u_i[u,i] for i in m.I)
+        # EXP: b_u_sup for rlp users (packets)
+        b_u_sup[u] = users[u].get_last_arriv_pkts() + sum(remain_u_i[u,i] for i in m.I)
     
-        # EXP: over_u for rlp users
-        over_u[u] = m.MAXover_u[u] - data.b_max
+        # EXP: over_u for rlp users (packets)
+        over_u[u] = m.MAXover_u[u] - users[u].get_buffer_pkt_capacity()
 
-        # EXP: d_u_sup for rlp users
-        d_u_sup[u] = remain_u_i[u, data.l_max] + over_u[u]
+        # EXP: d_u_sup for rlp users (packets)
+        d_u_sup[u] = remain_u_i[u, users[u].get_max_lat()-1] + over_u[u]
 
-        # EXP: p_u for rlp users
-        denominator = data.users[u].hist_b[data.n-data.users[u].w+1] + data.users[u].hist_rcv[data.n] + sum(data.users[u].hist_rcv[data.n-data.users[u].w+2 : data.n+1])
+        # EXP: p_u for rlp users (ratio)
+        denominator = users[u].get_buff_pkts(users[u].step-window_size+1) + users[u].get_last_arriv_pkts() + users[u].get_arriv_pkts(window_size)
         if denominator > 0:
-            p_u[u] = d_u_sup[u] + sum(data.users[u].hist_d[data.n-data.users[u].w+1 : data.n+1]) / denominator
+            p_u[u] = d_u_sup[u] + users[u].get_dropp_pkts(window_size) / denominator
         else:
             p_u[u] = 0*d_u_sup[u]
     
@@ -200,16 +158,17 @@ def optimize(sim: Simulation, method: str, allocate_all_resources = False, verbo
     g_u = dict()
     for u in m.U_fg:
         # EXP: g_u calculation
-        g_u[u] = (sum(data.users[u].hist_r[data.n-data.users[u].w+1 : data.n]) + r_u[u])/data.users[u].w
+        if window_size == 1:
+            g_u[u] = r_u[u]
+        else:
+            g_u[u] = (users[u].get_agg_thr(window_size-1) + r_u[u])/window_size
 
     # ------------------
     # OBJECTIVE FUNCTION
     # ------------------
 
     # OBJ: min sum R_s
-    #m.OBJECTIVE = pyo.Objective(expr=sum(R_s[s] for s in m.S), sense=pyo.minimize)
     m.OBJECTIVE = pyo.Objective(expr=sum(m.R_s[s] for s in m.S), sense=pyo.minimize)
-
 
     # -----------
     # CONSTRAINTS
@@ -219,11 +178,9 @@ def optimize(sim: Simulation, method: str, allocate_all_resources = False, verbo
 
     # CONSTR: sum R_s = R
     if allocate_all_resources:
-        #m.constr_R_s_sum = pyo.Constraint(expr=sum(R_s[s] for s in m.S) == data.R)
-        m.constr_R_s_sum = pyo.Constraint(expr=sum(m.R_s[s] for s in m.S) == data.R)
+        m.constr_R_s_sum = pyo.Constraint(expr=sum(m.R_s[s] for s in m.S) == len(rbgs))
     else:
-        #m.constr_R_s_sum = pyo.Constraint(expr=sum(R_s[s] for s in m.S) <= data.R)
-        m.constr_R_s_sum = pyo.Constraint(expr=sum(m.R_s[s] for s in m.S) <= data.R)
+        m.constr_R_s_sum = pyo.Constraint(expr=sum(m.R_s[s] for s in m.S) <= len(rbgs))
 
     # --------------- Constraints for all slices
     
@@ -232,34 +189,33 @@ def optimize(sim: Simulation, method: str, allocate_all_resources = False, verbo
     for s in m.S:
         # CONSTR: sum R_u = R_s
         m.constr_R_u_sum.add(
-            sum(m.R_u[u] for u in U_s[s]) == m.R_s[s]
+            sum(m.R_u[u] for u in slices[s].users.keys()) == m.R_s[s]
         )
 
-        ue_indexes = data.slices[s].users.keys()
-        prior = data.slices[s].rr_prioritization
+        ue_indexes = slices[s].users.keys()
+        user_indexes = slices[s].get_round_robin_scheduling()
         
-        for i in range (len(prior)-1):
+        for i in range (len(user_indexes)-1):
             # CONSTR: R_u prioritization
             m.constr_R_u_prioritization.add(
-                m.R_u[prior[i]] - m.R_u[prior[i+1]] >= 0
+                m.R_u[user_indexes[i]] >= m.R_u[user_indexes[i+1]]
             )
     
     # --------------- Constraints for all users
     
     m.constr_R_u_1 = pyo.ConstraintList()
     m.constr_R_u_2 = pyo.ConstraintList()
-    for u in m.U:
-        s = data.users[u].s
-
-        # CONSTR: R_u intra slice modeling upper bound
-        m.constr_R_u_1.add(
-            m.R_u[u] - m.R_s[s]/len(U_s[s]) <= 1 - data.e
-        )
-        
-        # CONSTR: R_u intra slice modeling lower bound
-        m.constr_R_u_2.add(
-            m.R_s[data.users[u].s]/len(U_s[s]) - m.R_u[u] <= 1 - data.e
-        )
+    for s in slices.keys():
+        for u in slices[s].users.keys():
+            # CONSTR: R_u intra slice modeling upper bound
+            m.constr_R_u_1.add(
+                m.R_u[u] - m.R_s[s]/len(slices[s].users) <= 1 - e
+            )
+            
+            # CONSTR: R_u intra slice modeling lower bound
+            m.constr_R_u_2.add(
+                m.R_s[s]/len(slices[s].users) - m.R_u[u] <= 1 - e
+            )
 
     # --------------- Constraints for fg users
     
@@ -267,112 +223,39 @@ def optimize(sim: Simulation, method: str, allocate_all_resources = False, verbo
     m.constr_f_u_intent = pyo.ConstraintList()
     m.constr_psi_u_le = pyo.ConstraintList()
     m.constr_psi_u_ge = pyo.ConstraintList()
-    m.constr_rho_u_le = pyo.ConstraintList()
-    m.constr_rho_u_ge = pyo.ConstraintList()
-    m.constr_lambda_u_le = pyo.ConstraintList()
-    m.constr_lambda_u_ge = pyo.ConstraintList()
-    m.constr_sigma_u_le = pyo.ConstraintList()
-    m.constr_sigma_u_ge = pyo.ConstraintList()
-    m.constr_omega_u_le = pyo.ConstraintList()
-    m.constr_omega_u_ge = pyo.ConstraintList()
-    for u in m.U_fg:
-        s = data.users[u].s
-        
-        # CONSTR: Long-term Throughput intent
-        if data.users[u].w == 1:
+    for s in m.S_fg:
+        for u in slices[s].users.keys():           
+            # CONSTR: Long-term Throughput intent
             m.constr_g_u_intent.add(
-                r_u[u] >= data.users[u].g_req
-            )
-        else:
-            m.constr_g_u_intent.add(
-                g_u[u] >= data.users[u].g_req
+                g_u[u] >= users[u].requirements["long_term_thr"]
             )
         
-        # Fifth-percentile constraints
-        if data.users[u].w == 1:
-            # CONSTR: Fifth-percentile intent for w = 1
-            m.constr_f_u_intent.add(
-                r_u[u] >= data.users[u].f_req
-            )    
-        elif data.users[u].w < 20:
-            sort_h = data.users[u].getSortedThroughputWindow(data.users[u].w, data.n)[0]
-            
-            # CONSTR: Psi upper bound
-            m.constr_psi_u_le.add(
-                r_u[u] + V_r * m.psi_u[u] <= V_r + sort_h
-            )
-            
-            # CONSTR: Psi lower bound
-            m.constr_psi_u_ge.add(
-                r_u[u] + (sort_h + data.e) * m.psi_u[u] >= sort_h + data.e
-            )
-            
-            # CONSTR: Fifth-percentile intent for n = 1
-            m.constr_f_u_intent.add(
-                r_u[u] >= m.psi_u[u] * data.users[u].f_req
-            )
-            
-        else:
-            sort = data.users[u].getSortedThroughputWindow(data.users[u].w, data.n)
-            h = int((data.users[u].w)/20)
-            sort_h_1 = sort[h-1]
-            sort_h = sort[h]
-
-            # CONSTR: Psi upper bound
-            m.constr_psi_u_le.add(
-                r_u[u] + V_r * m.psi_u[u] <= V_r + sort_h_1
-            )
-            
-            # CONSTR: Psi lower bound
-            m.constr_psi_u_ge.add(
-                r_u[u] + (sort_h_1 + data.e) * m.psi_u[u] >= sort_h_1 + data.e
-            )
-
-            # CONSTR: Rho upper bound
-            m.constr_rho_u_le.add(
-                r_u[u] + V_r * m.rho_u[u] <= V_r + sort_h
-            )
-            
-            # CONSTR: Rho lower bound
-            m.constr_rho_u_ge.add(
-                r_u[u] + (sort_h + data.e) * m.rho_u[u] >= sort_h + data.e
-            )
-
-            # CONSTR: Lambda upper bound
-            m.constr_lambda_u_le.add(
-                m.psi_u[u] + m.rho_u[u] - 2*m.lambda_u[u] >= 0
-            )
-            
-            # CONSTR: Lambda lower bound
-            m.constr_lambda_u_ge.add(
-                m.psi_u[u] + m.rho_u[u] - data.e * m.lambda_u[u] <= 2 - data.e
-            )
-
-            # CONSTR: Sigma upper bound
-            m.constr_sigma_u_le.add(
-                m.psi_u[u] + m.rho_u[u] + 2*m.sigma_u[u] <= 2
-            )
-            
-            # CONSTR: Sigma lower bound
-            m.constr_sigma_u_ge.add(
-                m.psi_u[u] + m.rho_u[u] + data.e * m.sigma_u[u] >= data.e
-            )
-
-            # CONSTR: Omega upper bound
-            m.constr_omega_u_le.add(
-                m.lambda_u[u] + m.sigma_u[u] + 2*m.omega_u[u] <= 2
-            )
-            
-            # CONSTR: Omega lower bound
-            m.constr_omega_u_ge.add(
-                m.lambda_u[u] + m.sigma_u[u] + data.e * m.omega_u[u] >= data.e
-            )
-            
-            # CONSTR: Fifth-percentile intent for w > 20
-            m.constr_f_u_intent.add(
-                r_u[u] >= m.omega_u[u] * data.users[u].f_req
-            )
-            
+            # Fifth-percentile constraints
+            if window_size == 1:
+                # CONSTR: Fifth-percentile intent for w = 1
+                m.constr_f_u_intent.add(
+                    r_u[u] >= users[u].requirements["fifth_perc_thr"]
+                )    
+            elif window_size < 20:
+                sort_0 = users[u].get_min_thr(window_size-1)[0]
+                
+                # CONSTR: Psi upper bound
+                m.constr_psi_u_le.add(
+                    r_u[u] + V_r * m.psi_u[u] <= V_r + sort_0
+                )
+                
+                # CONSTR: Psi lower bound
+                m.constr_psi_u_ge.add(
+                    r_u[u] + (sort_0 + e) * m.psi_u[u] >= sort_0 + e
+                )
+                
+                # CONSTR: Fifth-percentile intent for n = 1
+                m.constr_f_u_intent.add(
+                    r_u[u] >= m.psi_u[u] * users[u].requirements["fifth_perc_thr"]
+                )
+                
+            else:
+                raise Exception("Window size must be between 1 and 19")
     
     # --------------- Constraints for rlp users
     m.constr_k_u_floor_upper = pyo.ConstraintList()
@@ -394,25 +277,26 @@ def optimize(sim: Simulation, method: str, allocate_all_resources = False, verbo
     m.constr_maxover_u_le_b_max = pyo.ConstraintList()
     m.constr_p_u_intent = pyo.ConstraintList()
     for u in m.U_rlp:
-        
         # CONSTR: Throughput intent
         m.constr_r_u_intent.add(
-            r_u[u] >= data.users[u].r_req
+            r_u[u] >= users[u].requirements["throughput"]
         )
         
         # CONSTR: k_u flooring upper bound
         m.constr_k_u_floor_upper.add(
-            m.k_u[u] <= r_u[u]/data.PS + data.users[u].hist_part[data.n]
+            m.k_u[u] <= (r_u[u] + users[u].get_part_sent_bits())/users[u].get_pkt_size()
         )
 
         # CONSTR: k_u flooring lower bound
         m.constr_k_u_floor_lower.add(
-            m.k_u[u] + 1 >= r_u[u]/data.PS + data.users[u].hist_part[data.n] + data.e
+            m.k_u[u] + 1 >= (r_u[u] + users[u].get_part_sent_bits())/users[u].get_pkt_size() + e
         )
 
-        # CONSTR: sent_l_max <= buffer_l_max
+        max_lat = users[u].get_max_lat()
+
+        # CONSTR: sent_l_max_1 <= buffer_l_max_1
         m.constr_sent_l_max.add(
-            m.sent_u_i[u,data.l_max] <= data.users[u].hist_buff[data.n][data.l_max]
+            m.sent_u_i[u, max_lat-1] <= users[u].get_n_buff_pkts_waited_i_TTIs(max_lat-1) 
         )
 
         # CONSTR: sum sent_u_i  = T_u
@@ -427,7 +311,7 @@ def optimize(sim: Simulation, method: str, allocate_all_resources = False, verbo
 
         # CONSTR: T_u <= sum buff_u
         m.constr_T_u_le_sum_buff_u.add(
-            m.T_u[u] <= sum(data.users[u].hist_buff[data.n][i] for i in m.I)
+            m.T_u[u] <= users[u].get_buff_pkts_now()
         )
 
         # CONSTR: T_u >= k_u
@@ -437,31 +321,30 @@ def optimize(sim: Simulation, method: str, allocate_all_resources = False, verbo
 
         # CONSTR: T_u >= sum buff_u
         m.constr_T_u_ge_sum_buff_u.add(
-            m.T_u[u] >= sum(data.users[u].hist_buff[data.n][i] for i in m.I) - V_T * m.alpha_u[u]
+            m.T_u[u] >= users[u].get_buff_pkts_now() - V_T * m.alpha_u[u]
         )
         
-        for i in m.I_0_l_max_1:
-            # CONSTR: sent_u_i <= delta_u_i * buff_u
+        for i in m.I_l_max_2:
+            # CONSTR: sent_u_i <= delta_u_i * buff_u_i
             m.constr_sent_le_delta_buff.add(
-                m.sent_u_i[u,i] <= m.delta_u_i[u,i+1] * data.users[u].hist_buff[data.n][i]
+                m.sent_u_i[u,i] <= m.delta_u_i[u,i+1] * users[u].get_n_buff_pkts_waited_i_TTIs(i) 
             )
         
         for i in m.I_1_l_max:
-            
             # CONSTR: delta_u_i lower bound
             m.constr_delta_u_i_ge.add(
-                m.sent_u_i[u,i] + v_sent * m.delta_u_i[u,i] >= v_sent + data.users[u].hist_buff[data.n][i]
+                m.sent_u_i[u,i] + v_sent * m.delta_u_i[u,i] >= v_sent + users[u].get_n_buff_pkts_waited_i_TTIs(i) 
             )
 
             # CONSTR: delta_u_i upper bound
             m.constr_delta_u_i_le.add(
-                m.sent_u_i[u,i] - (V_sent + data.e) * m.delta_u_i[u,i] <= data.users[u].hist_buff[data.n][i] - data.e
+                m.sent_u_i[u,i] - (V_sent + e) * m.delta_u_i[u,i] <= users[u].get_n_buff_pkts_waited_i_TTIs(i)  - e
             )
         
         # CONSTR: Average Buffer Latency intent
         m.constr_l_u_intent.add(
-            sum((data.users[u].hist_acc[data.n][i] + m.sent_u_i[u,i])*i for i in m.I)
-            <= data.users[u].l_req * sum((data.users[u].hist_acc[data.n][i] + m.sent_u_i[u,i]) for i in m.I)
+            sum((users[u].get_n_buff_pkts_waited_i_TTIs(i) + m.sent_u_i[u,i])*i for i in m.I)
+            <= users[u].requirements["latency"] * (users[u].get_buff_pkts_now() + sum(m.sent_u_i[u,i] for i in m.I))
         )
         
         # CONSTR: maxover_u >= b_u_sup
@@ -471,7 +354,7 @@ def optimize(sim: Simulation, method: str, allocate_all_resources = False, verbo
 
         # CONSTR: maxover_u >= b_max
         m.constr_maxover_u_ge_b_max.add(
-            m.MAXover_u[u] >= data.b_max
+            m.MAXover_u[u] >= users[u].get_buffer_pkt_capacity()
         )
         
         # CONSTR: maxover_u <= b_u_sup
@@ -481,12 +364,12 @@ def optimize(sim: Simulation, method: str, allocate_all_resources = False, verbo
         
         # CONSTR: maxover_u <= b_max
         m.constr_maxover_u_le_b_max.add(
-            m.MAXover_u[u] <= data.b_max + V_over * m.beta_u[u]
+            m.MAXover_u[u] <= users[u].get_buffer_pkt_capacity() + V_over * m.beta_u[u]
         )
         
         # CONSTR: Packet Loss Rate intent
         m.constr_p_u_intent.add(
-            p_u[u] <= data.users[u].p_req
+            p_u[u] <= users[u].requirements["pkt_loss"]
         )
         
         

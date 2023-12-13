@@ -6,7 +6,7 @@ import json
 from simulation.jsonencoder import Encoder
 from simulation.rbg import RBG
 from simulation.user import User, UserConfiguration
-from simulation.intrasched import IntraSliceScheduler
+from simulation.intrasched import IntraSliceScheduler, RoundRobin
 
 class SliceConfiguration:
     def __init__(
@@ -122,6 +122,17 @@ class Slice:
         for u in self.users.values():
             result += u.get_arriv_thr(window)
         return result/len(self.users)
+    
+    def get_round_robin_scheduling(self) -> List[int]:
+        if type(self.scheduler) != RoundRobin:
+            raise Exception("Scheduler is not RoundRobin")
+        offset = self.scheduler.offset
+        n_users = len(self.users)
+        user_list = list(self.users.keys())
+        priorization_list = []
+        for i in range(n_users):
+            priorization_list.append(user_list[(i+offset)%n_users])
+        return priorization_list
     
     def __str__(self) -> str:
         return json.dumps(self.__dict__, cls=Encoder, indent=2)

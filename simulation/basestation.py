@@ -6,7 +6,8 @@ from simulation.jsonencoder import Encoder
 from simulation.rb import RB
 from simulation.rbg import RBG
 from simulation.slice import Slice, SliceConfiguration
-from simulation.intrasched import IntraSliceScheduler
+from simulation.user import User
+from  simulation.intrasched import IntraSliceScheduler
 from simulation.intersched import InterSliceScheduler
 
 class BaseStation:
@@ -14,15 +15,18 @@ class BaseStation:
         self,
         id: int,
         TTI: float, # s
+        rb_bandwidth: float, # Hz
         scheduler: InterSliceScheduler,
         rng:np.random.BitGenerator,
     ) -> None:
         self.id = id
         self.TTI = TTI
+        self.rb_bandwidth = rb_bandwidth
         self.scheduler = scheduler
         self.rng = rng
         self.step = 0
         self.slices: Dict[int, Slice] = {}
+        self.users: Dict[int, User] = {}
         self.rbgs:List[RBG] = []
     
     def add_slice(
@@ -61,6 +65,8 @@ class BaseStation:
         if slice_id not in self.slices:
             raise Exception("Cannot generate users to slice {} because this slice does not exist".format(slice_id))
         self.slices[slice_id].generate_and_add_users(user_ids=user_ids)
+        for u in user_ids:
+            self.users[u] = self.slices[slice_id].users[u]
 
     def arrive_pkts(self) -> None:
         for s in self.slices.values():
@@ -74,7 +80,11 @@ class BaseStation:
         self.step += 1
     
     def schedule_rbgs(self) -> None:
-        self.scheduler.schedule(rbgs=self.rbgs, slices=self.slices, TTI=self.TTI)
+        self.scheduler.schedule(
+            slices=self.slices,
+            users=self.users,
+            rbgs=self.rbgs
+        )
         for s in self.slices.values():
             s.schedule_rbgs()
 

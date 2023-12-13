@@ -2,7 +2,6 @@ import numpy as np
 from tqdm import tqdm
 from typing import List, Dict
 
-from simulation import intersched, intrasched
 from simulation.user import UserConfiguration, User
 from simulation.slice import SliceConfiguration
 from simulation.simulation import Simulation
@@ -46,8 +45,8 @@ if __name__ == "__main__":
     be_config = SliceConfiguration(
         type="be",
         requirements={
-            "long_term_pkt_thr": 10e6, # bits/s
-            "fifth_perc_pkt_thr": 5e6, # bits/s
+            "long_term_thr": 10e6, # bits/s
+            "fifth_perc_thr": 5e6, # bits/s
         },
         user_config=UserConfiguration(
             max_lat=100, # TTIs
@@ -66,8 +65,17 @@ if __name__ == "__main__":
         rng=np.random.default_rng()
     )
     
+    from simulation import intersched, intrasched
+
     basestation = sim.add_basestation(
-        inter_scheduler=intersched.RoundRobin(),
+        inter_scheduler=intersched.Optimal(
+            rb_bandwidth=sim.rb_bandwidth,
+            window_max=10,
+            e=1e-5,
+            allocate_all_resources=True,
+            method="cplex",
+            verbose=True
+        ),
         rbs_per_rbg=4,
         bandwidth=100e6 # 100MHz
     )
@@ -127,11 +135,8 @@ if __name__ == "__main__":
             u.set_spectral_efficiency(SEs[u.id][u.step])
 
     # Running 2000 TTIs = 2s
-
     TTIs = 2000
     for _ in tqdm(range(TTIs), leave=False, desc="TTIs"):
-        if _ == 1900:
-            print("a")
         set_users_spectral_efficiency(users=sim.users, SEs=SEs)
         sim.arrive_packets()
         sim.schedule_rbgs()
