@@ -154,7 +154,11 @@ class DiscreteBuffer():
         return self.get_sent_pkts_bits(window=window)/(window*self.TTI)
 
     def get_avg_buffer_TTI_latency(self) -> float:
-        return sum(self.sent[i]*i for i in range(self.max_lat))/(sum(self.sent))
+        sum_sent = sum(self.sent)
+        if sum_sent == 0:
+            return 0
+        else:
+            return sum(self.sent[i]*i for i in range(self.max_lat))/(sum(self.sent))
     
     def get_avg_buffer_latency(self) -> float:
         return self.get_avg_buffer_TTI_latency()*self.TTI
@@ -166,7 +170,19 @@ class DiscreteBuffer():
             window = self.step + 1
         dropp = self.get_dropp_pkts_bits(window)
         total = self.get_arriv_pkts_bits(window) + self.hist_buff_pkts[self.step-window] * self.pkt_size
-        return dropp/total
+        if total == 0:
+            return 0
+        else:
+            return dropp/total
+        
+    def get_sum_sent_pkts_ttis_waited(self) -> int:
+        sum_ttis = 0
+        for i in range(self.max_lat):
+            sum_ttis += self.sent[i]*i
+        return sum_ttis
+    
+    def get_total_sent_pkts(self) -> int:
+        return sum(self.sent)
 
     def __str__(self) -> str:
         return json.dumps(self.__dict__, cls=Encoder, indent=2)

@@ -107,7 +107,7 @@ class Slice:
             result += u.get_pkt_loss_rate(window)
         return result/len(self.users)
     
-    def get_pkt_sent_thr(self, window:int) -> float:
+    def get_sent_thr(self, window:int) -> float:
         if len(self.users) == 0:
             return 0
         result = 0.0
@@ -115,7 +115,7 @@ class Slice:
             result += u.get_sent_thr(window)
         return result/len(self.users)
 
-    def get_pkt_arriv_thr(self, window:int) -> float:
+    def get_arriv_thr(self, window:int) -> float:
         if len(self.users) == 0:
             return 0
         result = 0.0
@@ -123,15 +123,81 @@ class Slice:
             result += u.get_arriv_thr(window)
         return result/len(self.users)
     
-    def get_round_robin_scheduling(self) -> List[int]:
+    def get_worst_user_rrbgs(self) -> (int, int):
+        worst_metric = len(list(self.users.values())[0].rbgs)
+        worst_user = list(self.users.values())[0].id
+        for u in self.users.values():
+            if len(u.rbgs) < worst_metric:
+                worst_metric = len(u.rbgs)
+                worst_user = u.id
+        return worst_user, worst_metric
+
+    def get_worst_user_avg_buff_lat(self) -> (int, float):
+        worst_metric = list(self.users.values())[0].get_avg_buffer_latency()
+        worst_user = list(self.users.values())[0].id
+        for u in self.users.values():
+            if u.get_avg_buffer_latency() > worst_metric:
+                worst_metric = u.get_avg_buffer_latency()
+                worst_user = u.id
+        return worst_user, worst_metric
+    
+    def get_worst_user_buff_occ(self) -> (int, float):
+        worst_metric = list(self.users.values())[0].get_buffer_occupancy()
+        worst_user = list(self.users.values())[0].id
+        for u in self.users.values():
+            if u.get_buffer_occupancy() > worst_metric:
+                worst_metric = u.get_buffer_occupancy()
+                worst_user = u.id
+        return worst_user, worst_metric
+    
+    def get_worst_user_arriv_thr(self, window: int) -> (int, float):
+        worst_metric = list(self.users.values())[0].get_arriv_thr(window)
+        worst_user = list(self.users.values())[0].id
+        for u in self.users.values():
+            if u.get_arriv_thr(window) > worst_metric:
+                worst_metric = u.get_arriv_thr(window)
+                worst_user = u.id
+        return worst_user, worst_metric
+    
+    def get_worst_user_sent_thr(self, window: int) -> (int, float):
+        worst_metric = list(self.users.values())[0].get_sent_thr(window)
+        worst_user = list(self.users.values())[0].id
+        for u in self.users.values():
+            if u.get_sent_thr(window) < worst_metric:
+                worst_metric = u.get_sent_thr(window)
+                worst_user = u.id
+        return worst_user, worst_metric
+    
+    def get_worst_user_pkt_loss(self, window: int) -> (int, float):
+        worst_metric = list(self.users.values())[0].get_pkt_loss_rate(window)
+        worst_user = list(self.users.values())[0].id
+        for u in self.users.values():
+            if u.get_pkt_loss_rate(window) > worst_metric:
+                worst_metric = u.get_pkt_loss_rate(window)
+                worst_user = u.id
+        return worst_user, worst_metric
+    
+    def get_worst_user_spectral_eff(self) -> (int, float):
+        worst_metric = list(self.users.values())[0].SE
+        worst_user = list(self.users.values())[0].id
+        for u in self.users.values():
+            if u.SE < worst_metric:
+                worst_metric = u.SE
+                worst_user = u.id
+        return worst_user, worst_metric
+
+    
+    def get_round_robin_prior(self) -> List[int]:
         if type(self.scheduler) != RoundRobin:
             raise Exception("Scheduler is not RoundRobin")
-        offset = self.scheduler.offset
         n_users = len(self.users)
-        user_list = list(self.users.keys())
+        offset = self.scheduler.offset % n_users
+        user_list = list(self.users.values())
         priorization_list = []
         for i in range(n_users):
-            priorization_list.append(user_list[(i+offset)%n_users])
+            priorization_list.append(user_list[offset].id)
+            offset = (offset + 1) % n_users
+
         return priorization_list
     
     def __str__(self) -> str:

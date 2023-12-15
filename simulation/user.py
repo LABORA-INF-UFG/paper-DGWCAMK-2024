@@ -129,7 +129,13 @@ class User:
         return self.buff.partial_pkt_bits
     
     def get_buff_pkts_now(self) -> int:
-        return int(self.buff.get_buff_bits/self.buff.pkt_size)
+        return int(self.buff.get_buff_bits()/self.buff.pkt_size)
+
+    def get_sum_sent_pkts_ttis_waited(self) -> int:
+        return self.buff.get_sum_sent_pkts_ttis_waited()
+    
+    def get_total_sent_pkts(self) -> int:
+        return self.buff.get_total_sent_pkts()
 
     def get_buffer_occupancy(self) -> float:
         return self.buff.get_buffer_occupancy()

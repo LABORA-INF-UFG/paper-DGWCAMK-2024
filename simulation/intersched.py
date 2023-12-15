@@ -37,7 +37,8 @@ class RoundRobin(InterSliceScheduler):
 class Optimal(InterSliceScheduler):
     def __init__(
         self,
-        rb_bandwidth,
+        rb_bandwidth: float,
+        rbs_per_rbg: int,
         window_max: int,
         e: float,
         allocate_all_resources:bool,
@@ -45,12 +46,14 @@ class Optimal(InterSliceScheduler):
         verbose: bool,
     ) -> None:
         self.rb_bandwidth = rb_bandwidth
+        self.rbs_per_rbg = rbs_per_rbg
         self.window_max = window_max
         self.e = e
         self.allocate_all_resources = allocate_all_resources
         self.method = method
         self.verbose = verbose
         self.window = 1
+        self.supposed_user_rbgs: Dict[int, int] = dict()
 
     def schedule(self, slices: Dict[int, Slice], users: Dict[int, User], rbgs: List[RBG]):
         model, results = optimize(
@@ -58,6 +61,7 @@ class Optimal(InterSliceScheduler):
             users=users,
             rbgs=rbgs,
             rb_bandwidth=self.rb_bandwidth,
+            rbs_per_rbg = self.rbs_per_rbg,
             window_size=self.window,
             e=self.e,
             allocate_all_resources=self.allocate_all_resources,
@@ -68,6 +72,32 @@ class Optimal(InterSliceScheduler):
         if results.solver.termination_condition != "optimal":
             raise Exception ("Solution unfeasible")
         
+        for u in model.U_rlp:
+            max_lat = users[u].get_max_lat()
+            over = model.MAXover_u[u].value - users[u].get_buffer_pkt_capacity()
+            remain = users[u].get_n_buff_pkts_waited_i_TTIs(max_lat-1) - model.sent_u_i[u,max_lat-1].value
+            d_sup = remain + over
+            denominator = users[u].get_buff_pkts(users[u].step-self.window+1) + users[u].get_last_arriv_pkts() + users[u].get_arriv_pkts(self.window)
+            if denominator > 0:
+                p_sup = d_sup + users[u].get_dropp_pkts(self.window) / denominator
+            else:
+                p_sup = 0
+            
+            total_TTIs = users[u].get_sum_sent_pkts_ttis_waited()
+            total_sent = users[u].get_total_sent_pkts()
+            for i in range(max_lat):
+                total_TTIs += model.sent_u_i[u,i].value * i
+                total_sent += model.sent_u_i[u,i].value
+            if total_sent > 0:
+                avg_buff_lat = total_TTIs/total_sent
+            else:
+                avg_buff_lat = 0
+            print("Supposed average buffer latency for user {}: {}ms <= {}ms".format(u, avg_buff_lat, users[u].requirements["latency"]))      
+            #print("Supposed packet loss for user {}: {}% <= {}%".format(u, p_sup * 100, users[u].requirements["pkt_loss"]*100))
+
+        for u in users.keys():
+            self.supposed_user_rbgs[u] = model.R_u[u].value
+
         rbg_index = 0
         for s in slices.values():
             s.clear_rbg_allocation()

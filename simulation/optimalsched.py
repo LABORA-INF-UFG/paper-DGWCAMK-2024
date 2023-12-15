@@ -10,6 +10,7 @@ def optimize(
     users: Dict[int, User],
     rbgs: List[RBG],
     rb_bandwidth: float,
+    rbs_per_rbg: int,
     window_size: int,
     e: float,
     method: str,
@@ -123,7 +124,7 @@ def optimize(
     r_u = dict()
     for u in m.U:
         # EXP: r_u calculation for all users (bits/s)
-        r_u[u] = sum(r.bandwidth for r in users[u].rbgs) * rb_bandwidth * users[u].SE
+        r_u[u] = m.R_u[u] * rbs_per_rbg * rb_bandwidth * users[u].SE
 
     # --------------- Expressions for rlp users
     
@@ -193,7 +194,7 @@ def optimize(
         )
 
         ue_indexes = slices[s].users.keys()
-        user_indexes = slices[s].get_round_robin_scheduling()
+        user_indexes = slices[s].get_round_robin_prior()
         
         for i in range (len(user_indexes)-1):
             # CONSTR: R_u prioritization
@@ -224,20 +225,20 @@ def optimize(
     m.constr_psi_u_le = pyo.ConstraintList()
     m.constr_psi_u_ge = pyo.ConstraintList()
     for s in m.S_fg:
-        for u in slices[s].users.keys():           
+        for u in slices[s].users.keys():
             # CONSTR: Long-term Throughput intent
             m.constr_g_u_intent.add(
                 g_u[u] >= users[u].requirements["long_term_thr"]
             )
-        
             # Fifth-percentile constraints
             if window_size == 1:
                 # CONSTR: Fifth-percentile intent for w = 1
                 m.constr_f_u_intent.add(
                     r_u[u] >= users[u].requirements["fifth_perc_thr"]
-                )    
+                )
+                
             elif window_size < 20:
-                sort_0 = users[u].get_min_thr(window_size-1)[0]
+                sort_0 = users[u].get_min_thr(window_size-1)
                 
                 # CONSTR: Psi upper bound
                 m.constr_psi_u_le.add(
@@ -277,11 +278,13 @@ def optimize(
     m.constr_maxover_u_le_b_max = pyo.ConstraintList()
     m.constr_p_u_intent = pyo.ConstraintList()
     for u in m.U_rlp:
+        
         # CONSTR: Throughput intent
         m.constr_r_u_intent.add(
             r_u[u] >= users[u].requirements["throughput"]
         )
         
+
         # CONSTR: k_u flooring upper bound
         m.constr_k_u_floor_upper.add(
             m.k_u[u] <= (r_u[u] + users[u].get_part_sent_bits())/users[u].get_pkt_size()
@@ -324,13 +327,13 @@ def optimize(
             m.T_u[u] >= users[u].get_buff_pkts_now() - V_T * m.alpha_u[u]
         )
         
-        for i in m.I_l_max_2:
+        for i in m.I_without_last:
             # CONSTR: sent_u_i <= delta_u_i * buff_u_i
             m.constr_sent_le_delta_buff.add(
                 m.sent_u_i[u,i] <= m.delta_u_i[u,i+1] * users[u].get_n_buff_pkts_waited_i_TTIs(i) 
             )
         
-        for i in m.I_1_l_max:
+        for i in m.I_without_first:
             # CONSTR: delta_u_i lower bound
             m.constr_delta_u_i_ge.add(
                 m.sent_u_i[u,i] + v_sent * m.delta_u_i[u,i] >= v_sent + users[u].get_n_buff_pkts_waited_i_TTIs(i) 
@@ -343,9 +346,10 @@ def optimize(
         
         # CONSTR: Average Buffer Latency intent
         m.constr_l_u_intent.add(
-            sum((users[u].get_n_buff_pkts_waited_i_TTIs(i) + m.sent_u_i[u,i])*i for i in m.I)
-            <= users[u].requirements["latency"] * (users[u].get_buff_pkts_now() + sum(m.sent_u_i[u,i] for i in m.I))
+            users[u].get_sum_sent_pkts_ttis_waited() + sum(m.sent_u_i[u,i]*i for i in m.I)
+            <= users[u].requirements["latency"] * (users[u].get_total_sent_pkts() + sum(m.sent_u_i[u,i] for i in m.I))
         )
+        
         
         # CONSTR: maxover_u >= b_u_sup
         m.constr_maxover_u_ge_b_u_sup.add(
@@ -366,12 +370,11 @@ def optimize(
         m.constr_maxover_u_le_b_max.add(
             m.MAXover_u[u] <= users[u].get_buffer_pkt_capacity() + V_over * m.beta_u[u]
         )
-        
+
         # CONSTR: Packet Loss Rate intent
         m.constr_p_u_intent.add(
             p_u[u] <= users[u].requirements["pkt_loss"]
         )
-        
         
     # ----------
     # DUAL MODEL
