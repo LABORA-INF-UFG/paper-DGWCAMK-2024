@@ -174,7 +174,7 @@ if __name__ == "__main__":
 
     SE_multiplier = 3.0
     SEs:Dict[int, List[float]] = dict()
-    SE_trial = 1 # 1, ..., 50
+    SE_trial = 36 # 1, ..., 50
     SE_sub_carrier = 2 # 1, 2
     SE_file_base_string = "se/trial{}_f{}_ue{}.npy"
     for u in sim.users:
@@ -191,30 +191,38 @@ if __name__ == "__main__":
     for _ in tqdm(range(TTIs), leave=False, desc="TTIs"):
         set_users_spectral_efficiency(users=sim.users, SEs=SEs)
         sim.arrive_packets()
-        sim.schedule_rbgs()
-
-        # for u in sim.users:
-        #     print("User {}: supposed {}, got {} RBGs".format(
-        #         u,
-        #         sim.basestations[basestation].scheduler.supposed_user_rbgs[u],
-        #         len(sim.users[u].rbgs)
-        #     ))
-
-        sim.transmit()
-
+        
+        for u in sim.users:
+            if u in sim.slices[2].users:
+                continue
+            print("Buffer for user {}: {}".format(u, sim.users[u].buff.buff[:10]))
+        
         print("Step",_)
+        
+        sent_lists:Dict[int, List[int]] = dict()
+        for u in sim.users:
+            sent_lists[u] = sim.users[u].buff.sent[:10]
+
+        sim.schedule_rbgs()
+        sim.transmit()
+        
+        for u in sim.users:
+            if u in sim.slices[2].users:
+                continue
+            sent_lists[u] = list(np.array(sim.users[u].buff.sent[:10]) - np.array(sent_lists[u]))
+            print("Sent pkt list for user {}: {}".format(u, sent_lists[u]))
+            if sum(np.array(sent_lists[u]) - np.array(sim.basestations[basestation].scheduler.sent_lists[u])) != 0:
+                raise Exception("Theoretical and real sent packets are different")
+        #     print("Sent packets for user {}: {}".format(
+        #         u,
+        #         sim.users[u].get_last_sent_pkts()
+        #     ))
+        
         #print_slice_avg_metrics(bs=sim.basestations[basestation], window=10) # 10ms window
         print_slice_worst_metrics(bs=sim.basestations[basestation], window=10) # 10ms window
-        
-
-    # print(sim)
-    
-    # Printing metrics
-
     
 
     # Saving simulation data
-
     import pickle
     sim_data_file = open("simulation_data.pickle", "wb")
     pickle.dump(sim, file=sim_data_file)

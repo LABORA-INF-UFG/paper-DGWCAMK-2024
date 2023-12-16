@@ -72,6 +72,7 @@ class Optimal(InterSliceScheduler):
         if results.solver.termination_condition != "optimal":
             raise Exception ("Solution unfeasible")
         
+        self.sent_lists:Dict[int, List[int]] = {}
         for u in model.U_rlp:
             max_lat = users[u].get_max_lat()
             over = model.MAXover_u[u].value - users[u].get_buffer_pkt_capacity()
@@ -92,8 +93,15 @@ class Optimal(InterSliceScheduler):
                 avg_buff_lat = total_TTIs/total_sent
             else:
                 avg_buff_lat = 0
-            print("Supposed average buffer latency for user {}: {}ms <= {}ms".format(u, avg_buff_lat, users[u].requirements["latency"]))      
+            self.sent_lists[u] = []
+            for i in range(10):
+                self.sent_lists[u].append(int(model.sent_u_i[u,i].value))
+            #print("Supposed average buffer latency for user {}: {}ms <= {}ms".format(u, avg_buff_lat, users[u].requirements["latency"]))      
             #print("Supposed packet loss for user {}: {}% <= {}%".format(u, p_sup * 100, users[u].requirements["pkt_loss"]*100))
+            #print("Supposed throughput for user {}: {}Mbps".format(u, model.R_u[u].value*self.rbs_per_rbg*self.rb_bandwidth*users[u].SE/1e6))
+            #print("Supposed total sent packets for user {}: {}".format(u, int(model.T_u[u].value)))
+            #print("Supposed pkt capacity for user {}: {}".format(u, model.k_u[u].value))
+            print("Supposed sent pkt list for user {}: {}".format(u, self.sent_lists[u]))
 
         for u in users.keys():
             self.supposed_user_rbgs[u] = model.R_u[u].value

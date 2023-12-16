@@ -283,16 +283,15 @@ def optimize(
         m.constr_r_u_intent.add(
             r_u[u] >= users[u].requirements["throughput"]
         )
-        
 
         # CONSTR: k_u flooring upper bound
         m.constr_k_u_floor_upper.add(
-            m.k_u[u] <= (r_u[u] + users[u].get_part_sent_bits())/users[u].get_pkt_size()
+            m.k_u[u] <= (r_u[u]*users[u].TTI + users[u].get_part_sent_bits())/users[u].get_pkt_size()
         )
 
         # CONSTR: k_u flooring lower bound
         m.constr_k_u_floor_lower.add(
-            m.k_u[u] + 1 >= (r_u[u] + users[u].get_part_sent_bits())/users[u].get_pkt_size() + e
+            m.k_u[u] + 1 >= (r_u[u]*users[u].TTI + users[u].get_part_sent_bits())/users[u].get_pkt_size() + e
         )
 
         max_lat = users[u].get_max_lat()
@@ -343,13 +342,17 @@ def optimize(
             m.constr_delta_u_i_le.add(
                 m.sent_u_i[u,i] - (V_sent + e) * m.delta_u_i[u,i] <= users[u].get_n_buff_pkts_waited_i_TTIs(i)  - e
             )
-        
+        """
         # CONSTR: Average Buffer Latency intent
         m.constr_l_u_intent.add(
             users[u].get_sum_sent_pkts_ttis_waited() + sum(m.sent_u_i[u,i]*i for i in m.I)
             <= users[u].requirements["latency"] * (users[u].get_total_sent_pkts() + sum(m.sent_u_i[u,i] for i in m.I))
         )
-        
+        """
+        # CONSTR: Average Buffer Latency intent (modified)
+        m.constr_l_u_intent.add(
+            sum(remain_u_i[u,i]*(i+1) for i in m.I) <= users[u].requirements["latency"] * sum(remain_u_i[u,i] for i in m.I)
+        )
         
         # CONSTR: maxover_u >= b_u_sup
         m.constr_maxover_u_ge_b_u_sup.add(

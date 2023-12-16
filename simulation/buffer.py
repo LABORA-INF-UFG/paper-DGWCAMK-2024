@@ -75,6 +75,8 @@ class DiscreteBuffer():
 
     def __advance_TTI(self):
         self.hist_dropp_max_lat_pkts.append(self.buff[self.max_lat-1])
+        if self.buff[self.max_lat-1] > 0:
+            self.partial_pkt_bits = 0
         for i in reversed(range(1, self.max_lat)): # Advancing the buffer
             self.buff[i] = self.buff[i-1]
         self.buff[0] = 0
@@ -86,6 +88,8 @@ class DiscreteBuffer():
         int_pkts = int(real_pkts)
         self.partial_pkt_bits = (real_pkts - int_pkts)*self.pkt_size
         sent_pkts = 0
+        self.sum_last_sent_pkts = 0
+        self.sum_last_sent_TTIs = 0
         for i in reversed(range(self.max_lat)):
             if int_pkts == 0:
                 break
@@ -93,6 +97,8 @@ class DiscreteBuffer():
                 self.buff[i] -= int_pkts
                 self.sent[i] += int_pkts
                 sent_pkts += int_pkts
+                self.sum_last_sent_TTIs += int_pkts*i
+                self.sum_last_sent_pkts += int_pkts
                 int_pkts = 0
             else:
                 int_pkts -= self.buff[i]
@@ -153,15 +159,27 @@ class DiscreteBuffer():
             window = self.step + 1
         return self.get_sent_pkts_bits(window=window)/(window*self.TTI)
 
-    def get_avg_buffer_TTI_latency(self) -> float:
+    """
+    def _get_avg_buffer_TTI_latency(self) -> float: # Accumulated latency for sent packets
         sum_sent = sum(self.sent)
         if sum_sent == 0:
             return 0
         else:
             return sum(self.sent[i]*i for i in range(self.max_lat))/(sum(self.sent))
+    """
+    """
+    def _get_avg_buffer_TTI_latency(self) -> float: # Instantaneous latency for sent packets
+        if self.sum_last_sent_pkts == 0:
+            return 0
+        return self.sum_last_sent_TTIs/self.sum_last_sent_pkts
+    """
+    def _get_avg_buffer_TTI_latency(self) -> float: # Instantaneous latency for packets on the buffer
+        if sum(self.buff) == 0:
+            return 0
+        return sum(self.buff[i]*i for i in range(self.max_lat))/sum(self.buff)
     
     def get_avg_buffer_latency(self) -> float:
-        return self.get_avg_buffer_TTI_latency()*self.TTI
+        return self._get_avg_buffer_TTI_latency()*self.TTI
 
     def get_pkt_loss_rate(self, window:int) -> float:
         if window < 1:

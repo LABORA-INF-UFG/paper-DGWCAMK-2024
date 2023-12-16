@@ -155,6 +155,9 @@ class User:
     def get_buffer_array(self):
         return copy(self.buff.buff)
     
+    def get_last_sent_pkts(self):
+        return self.buff.hist_sent_pkts[-1]
+    
     def get_long_term_thr(self, window:int) -> float:
         if window < 1:
             raise Exception("window must be >= 1")
