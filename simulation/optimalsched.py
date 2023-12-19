@@ -349,10 +349,33 @@ def optimize(
             <= users[u].requirements["latency"] * (users[u].get_total_sent_pkts() + sum(m.sent_u_i[u,i] for i in m.I))
         )
         """
-        # CONSTR: Average Buffer Latency intent (modified)
+        """
+        # CONSTR: Average Buffer Latency intent (modified 1)
         m.constr_l_u_intent.add(
-            sum(remain_u_i[u,i]*(i+1) for i in m.I) <= users[u].requirements["latency"] * sum(remain_u_i[u,i] for i in m.I)
+            users[u].get_sum_sent_pkts_ttis_waited() + sum(m.sent_u_i[u,i]*i+remain_u_i[u,i]*(i+1) for i in m.I)
+            <= users[u].requirements["latency"] * (users[u].get_total_sent_pkts() + sum(m.sent_u_i[u,i] + remain_u_i[u,i] for i in m.I))
         )
+        """
+        """
+        # CONSTR: Average Buffer Latency intent (modified 2)
+        m.constr_l_u_intent.add(
+            sum(m.sent_u_i[u,i]*(i+1) for i in m.I)
+            <= users[u].requirements["latency"] * sum(m.sent_u_i[u,i] for i in m.I)
+        )
+        """
+        """
+        # CONSTR: Average Buffer Latency intent (modified 3)
+        m.constr_l_u_intent.add(
+            users[u].get_sum_sent_pkts_ttis_waited() + sum(remain_u_i[u,i]*(i+1) for i in m.I)
+            <= users[u].requirements["latency"] * (users[u].get_total_sent_pkts() + sum(remain_u_i[u,i] for i in m.I))
+        )
+        """
+        # CONSTR: Average Buffer Latency intent (modified 4)
+        m.constr_l_u_intent.add(
+            remain_u_i[u,users[u].requirements["latency"]] <= 0
+        )
+
+        # Idea: add another avg buff lat constraint to guarantee the throughput for sending avg(buff[0:l_req]) pkts
         
         # CONSTR: maxover_u >= b_u_sup
         m.constr_maxover_u_ge_b_u_sup.add(

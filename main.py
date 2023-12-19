@@ -195,13 +195,13 @@ if __name__ == "__main__":
         for u in sim.users:
             if u in sim.slices[2].users:
                 continue
-            print("Buffer for user {}: {}".format(u, sim.users[u].buff.buff[:10]))
+            print("Buffer for user {}: {}".format(u, sim.users[u].buff.buff[:30]))
         
         print("Step",_)
         
         sent_lists:Dict[int, List[int]] = dict()
         for u in sim.users:
-            sent_lists[u] = sim.users[u].buff.sent[:10]
+            sent_lists[u] = sim.users[u].buff.sent[:30]
 
         sim.schedule_rbgs()
         sim.transmit()
@@ -209,7 +209,7 @@ if __name__ == "__main__":
         for u in sim.users:
             if u in sim.slices[2].users:
                 continue
-            sent_lists[u] = list(np.array(sim.users[u].buff.sent[:10]) - np.array(sent_lists[u]))
+            sent_lists[u] = list(np.array(sim.users[u].buff.sent[:30]) - np.array(sent_lists[u]))
             print("Sent pkt list for user {}: {}".format(u, sent_lists[u]))
             if sum(np.array(sent_lists[u]) - np.array(sim.basestations[basestation].scheduler.sent_lists[u])) != 0:
                 raise Exception("Theoretical and real sent packets are different")

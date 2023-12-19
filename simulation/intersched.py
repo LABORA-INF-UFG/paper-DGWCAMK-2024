@@ -94,7 +94,7 @@ class Optimal(InterSliceScheduler):
             else:
                 avg_buff_lat = 0
             self.sent_lists[u] = []
-            for i in range(10):
+            for i in range(30):
                 self.sent_lists[u].append(int(model.sent_u_i[u,i].value))
             #print("Supposed average buffer latency for user {}: {}ms <= {}ms".format(u, avg_buff_lat, users[u].requirements["latency"]))      
             #print("Supposed packet loss for user {}: {}% <= {}%".format(u, p_sup * 100, users[u].requirements["pkt_loss"]*100))

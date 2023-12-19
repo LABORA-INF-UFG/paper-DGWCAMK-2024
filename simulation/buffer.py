@@ -159,25 +159,26 @@ class DiscreteBuffer():
             window = self.step + 1
         return self.get_sent_pkts_bits(window=window)/(window*self.TTI)
 
-    """
+    
     def _get_avg_buffer_TTI_latency(self) -> float: # Accumulated latency for sent packets
         sum_sent = sum(self.sent)
         if sum_sent == 0:
             return 0
         else:
             return sum(self.sent[i]*i for i in range(self.max_lat))/(sum(self.sent))
-    """
+    
     """
     def _get_avg_buffer_TTI_latency(self) -> float: # Instantaneous latency for sent packets
         if self.sum_last_sent_pkts == 0:
             return 0
         return self.sum_last_sent_TTIs/self.sum_last_sent_pkts
     """
+    """
     def _get_avg_buffer_TTI_latency(self) -> float: # Instantaneous latency for packets on the buffer
         if sum(self.buff) == 0:
             return 0
         return sum(self.buff[i]*i for i in range(self.max_lat))/sum(self.buff)
-    
+    """
     def get_avg_buffer_latency(self) -> float:
         return self._get_avg_buffer_TTI_latency()*self.TTI
 
