@@ -14,20 +14,16 @@ class Simulation:
         self,
         option_5g: int,
         rbs_per_rbg: int,
-        rng: np.random.BitGenerator
     ) -> None:
         if option_5g < 0 or option_5g > 4:
             raise Exception("Option = {} is not valid for the simulation (must be 0, 1, 2, 3 or 4)".format(option_5g))
         self.option_5g = option_5g
         self.rbs_per_rbg = rbs_per_rbg
-        self.rng = rng
         self.TTI:float = 2**-option_5g * 1e-3 # s
         self.sub_carrier_width:float = 2**option_5g * 15e3 # Hz
         self.rb_bandwidth:float = 12 * self.sub_carrier_width # Hz
         self.step = 0
         self.basestation_id = 0
-        self.user_id = 0
-        self.slice_id = 0
         self.basestations:Dict[int, BaseStation] = {}
         self.slices:Dict[int, Slice] = {}
         self.users:Dict[int, User] = {}
@@ -37,13 +33,16 @@ class Simulation:
         inter_scheduler:intersched.InterSliceScheduler,
         bandwidth: float,
         rbs_per_rbg: int,
+        name: str,
+        seed: int = None,
     ) -> int:
         self.basestations[self.basestation_id] = BaseStation(
             id=self.basestation_id,
+            name=name,
             TTI=self.TTI,
             rb_bandwidth=self.rb_bandwidth,
             scheduler=inter_scheduler,
-            rng=self.rng
+            rng=np.random.default_rng(seed=seed)
         )
         n_rbs = int(bandwidth/self.rb_bandwidth)
         n_rbgs = int(n_rbs/rbs_per_rbg)
@@ -64,15 +63,10 @@ class Simulation:
     ) -> int:
         if basestation_id not in self.basestations:
             raise Exception("Basestation {} does not exist".format(basestation_id))
-        self.basestations[basestation_id].add_slice(
-            slice_id=self.slice_id,
+        return self.basestations[basestation_id].add_slice(
             slice_config=slice_config,
             intra_scheduler=intra_scheduler
-        )
-        self.slices[self.slice_id] = self.basestations[basestation_id].slices[self.slice_id]
-        slice_id = self.slice_id
-        self.slice_id += 1
-        return slice_id
+        ) 
 
     def add_users(
         self,
@@ -82,15 +76,10 @@ class Simulation:
     ) -> List[int]:
         if basestation_id not in self.basestations:
             raise Exception("Basestation {} does not exist".format(basestation_id))
-        u_ids = range(self.user_id, self.user_id+n_users)
-        self.basestations[basestation_id].add_slice_users(
+        return self.basestations[basestation_id].add_slice_users(
             slice_id=slice_id,
-            user_ids=u_ids
+            n_users=n_users
         )
-        for u_id in u_ids:
-            self.users[u_id] = self.basestations[basestation_id].slices[slice_id].users[u_id]
-        self.user_id += n_users
-        return u_ids
 
     def arrive_packets(self) -> None:
         for bs in self.basestations.values():

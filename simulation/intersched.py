@@ -68,7 +68,7 @@ class Optimal(InterSliceScheduler):
             method=self.method,
             verbose=self.verbose,
         )
-
+        
         if results.solver.termination_condition != "optimal":
             raise Exception ("Solution unfeasible")
         
@@ -101,7 +101,7 @@ class Optimal(InterSliceScheduler):
             #print("Supposed throughput for user {}: {}Mbps".format(u, model.R_u[u].value*self.rbs_per_rbg*self.rb_bandwidth*users[u].SE/1e6))
             #print("Supposed total sent packets for user {}: {}".format(u, int(model.T_u[u].value)))
             #print("Supposed pkt capacity for user {}: {}".format(u, model.k_u[u].value))
-            print("Supposed sent pkt list for user {}: {}".format(u, self.sent_lists[u]))
+            #print("Supposed sent pkt list for user {}: {}".format(u, self.sent_lists[u]))
 
         for u in users.keys():
             self.supposed_user_rbgs[u] = model.R_u[u].value

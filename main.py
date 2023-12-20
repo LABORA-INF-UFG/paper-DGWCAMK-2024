@@ -111,12 +111,11 @@ if __name__ == "__main__":
     sim = Simulation(
         option_5g=0, # TTI = 1ms
         rbs_per_rbg=4,
-        rng=np.random.default_rng()
     )
     
     from simulation import intersched, intrasched
 
-    basestation = sim.add_basestation(
+    opt_bs = sim.add_basestation(
         inter_scheduler=intersched.Optimal(
             rb_bandwidth=sim.rb_bandwidth,
             rbs_per_rbg= sim.rbs_per_rbg,
@@ -127,99 +126,115 @@ if __name__ == "__main__":
             verbose=False
         ),
         rbs_per_rbg=sim.rbs_per_rbg,
-        bandwidth=100e6 # 100MHz
+        bandwidth=100e6, # 100MHz
+        seed = 1, # For generating random numbers
+        name = "optimal"
     )
 
-    # Instantiating slices
-
-    embb = sim.add_slice(
-        basestation_id=basestation,
-        slice_config=embb_config,
-        intra_scheduler=intrasched.RoundRobin()
+    rr_bs = sim.add_basestation(
+        inter_scheduler=intersched.RoundRobin(),
+        rbs_per_rbg=sim.rbs_per_rbg,
+        bandwidth=100e6, # 100MHz
+        seed = 1, # For generating random numbers
+        name = "roundrobin"
     )
 
-    urllc = sim.add_slice(
-        basestation_id=basestation,
-        slice_config=urllc_config,
-        intra_scheduler=intrasched.RoundRobin()
-    )
+    bs_ids = [opt_bs, rr_bs]
+    for bs_id in bs_ids:
+        # Instantiating slices
+        embb = sim.add_slice(
+            basestation_id=bs_id,
+            slice_config=embb_config,
+            intra_scheduler=intrasched.RoundRobin()
+        )
+
+        urllc = sim.add_slice(
+            basestation_id=bs_id,
+            slice_config=urllc_config,
+            intra_scheduler=intrasched.RoundRobin()
+        )
+        
+        be = sim.add_slice(
+            basestation_id=bs_id,
+            slice_config=be_config,
+            intra_scheduler=intrasched.RoundRobin()
+        )
+
+        # Instantiating users
+        embb_users = sim.add_users(
+            basestation_id=bs_id,
+            slice_id=embb,
+            n_users=3
+        )
+
+        urllc_users = sim.add_users(
+            basestation_id=bs_id,
+            slice_id=urllc,
+            n_users=3
+        )
+
+        be_users = sim.add_users(
+            basestation_id=bs_id,
+            slice_id=be,
+            n_users=4
+        )
+        print("Basestation {} users: {}".format(sim.basestations[bs_id].name, list(sim.basestations[bs_id].users.keys())))
+        print("Basestation {} slices: {}".format(sim.basestations[bs_id].name, list(sim.basestations[bs_id].slices.keys())))
     
-    be = sim.add_slice(
-        basestation_id=basestation,
-        slice_config=be_config,
-        intra_scheduler=intrasched.RoundRobin()
-    )
-
-    # Instantiating users
-
-    embb_users = sim.add_users(
-        basestation_id=basestation,
-        slice_id=embb,
-        n_users=3
-    )
-
-    urllc_users = sim.add_users(
-        basestation_id=basestation,
-        slice_id=urllc,
-        n_users=3
-    )
-
-    be_users = sim.add_users(
-        basestation_id=basestation,
-        slice_id=be,
-        n_users=4
-    )
-
     # Loading the spectral efficiency for each user
-
-    SE_multiplier = 3.0
     SEs:Dict[int, List[float]] = dict()
+    SE_multiplier = 3.0
     SE_trial = 36 # 1, ..., 50
     SE_sub_carrier = 2 # 1, 2
     SE_file_base_string = "se/trial{}_f{}_ue{}.npy"
-    for u in sim.users:
+    for u in range(10):
         SE_file_string = SE_file_base_string.format(SE_trial, SE_sub_carrier, u+1)
         SEs[u] = list(np.load(SE_file_string)*SE_multiplier)
-
+    
     def set_users_spectral_efficiency(users:Dict[int, User], SEs: Dict[int, List[float]]):
         for u in users.values():
-            #u.set_spectral_efficiency(SEs[u.id][u.step])
-            u.set_spectral_efficiency(1.0)
+            u.set_spectral_efficiency(SEs[u.id][u.step])
+            #u.set_spectral_efficiency(1.0)
 
     # Running 2000 TTIs = 2s
     TTIs = 2000
     for _ in tqdm(range(TTIs), leave=False, desc="TTIs"):
-        set_users_spectral_efficiency(users=sim.users, SEs=SEs)
+        for bs_id in bs_ids:
+            set_users_spectral_efficiency(users=sim.basestations[bs_id].users, SEs=SEs)
+        # bs_id = 0
+        # bs = sim.basestations[0]
+        
+        # print([u.SE for u in bs.users.values()])
         sim.arrive_packets()
         
-        for u in sim.users:
-            if u in sim.slices[2].users:
-                continue
-            print("Buffer for user {}: {}".format(u, sim.users[u].buff.buff[:30]))
+        # for u in bs.users:
+        #     if u in bs.slices[2].users:
+        #         continue
+        #     print("Buffer for user {}: {}".format(u, bs.users[u].buff.buff[:30]))
         
-        print("Step",_)
+        # print("Step",_)
         
-        sent_lists:Dict[int, List[int]] = dict()
-        for u in sim.users:
-            sent_lists[u] = sim.users[u].buff.sent[:30]
+        # sent_lists:Dict[int, List[int]] = dict()
+        # for u in bs.users:
+        #     sent_lists[u] = bs.users[u].buff.sent[:30]
 
         sim.schedule_rbgs()
         sim.transmit()
         
-        for u in sim.users:
-            if u in sim.slices[2].users:
-                continue
-            sent_lists[u] = list(np.array(sim.users[u].buff.sent[:30]) - np.array(sent_lists[u]))
-            print("Sent pkt list for user {}: {}".format(u, sent_lists[u]))
-            if sum(np.array(sent_lists[u]) - np.array(sim.basestations[basestation].scheduler.sent_lists[u])) != 0:
-                raise Exception("Theoretical and real sent packets are different")
-        #     print("Sent packets for user {}: {}".format(
-        #         u,
-        #         sim.users[u].get_last_sent_pkts()
-        #     ))
+        # for u in bs.users:
+        #     if u in bs.slices[2].users:
+        #         continue
+        #     sent_lists[u] = list(np.array(bs.users[u].buff.sent[:30]) - np.array(sent_lists[u]))
+        #     print("Sent pkt list for user {}: {}".format(u, sent_lists[u]))
+        #     if sum(np.array(sent_lists[u]) - np.array(sim.basestations[bs_id].scheduler.sent_lists[u])) != 0:
+        #         raise Exception("Theoretical and real sent packets are different")
+        # #     print("Sent packets for user {}: {}".format(
+        # #         u,
+        # #         bs.users[u].get_last_sent_pkts()
+        # #     ))
         
-        #print_slice_avg_metrics(bs=sim.basestations[basestation], window=10) # 10ms window
-        print_slice_worst_metrics(bs=sim.basestations[basestation], window=10) # 10ms window
+        # #print_slice_avg_metrics(bs=sim.basestations[bs_id], window=10) # 10ms window
+        # print_slice_worst_metrics(bs=sim.basestations[bs_id], window=10) # 10ms window
     
 
     # Saving simulation data
