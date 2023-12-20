@@ -8,7 +8,6 @@ PIP dependencies:
 - numpy
 - pyomo
 - matplotlib
-- gurobipy
 
 Other dependencies:
 - CPLEX
