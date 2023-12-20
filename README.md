@@ -6,6 +6,7 @@ Runs with Python 3.7.17, which you can install via [Pyenv](https://github.com/py
 PIP dependencies:
 - tqdm
 - Pyomo
+- Matplotlib
 
 Other dependencies:
 - CPLEX
