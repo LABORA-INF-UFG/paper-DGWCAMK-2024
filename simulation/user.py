@@ -51,10 +51,18 @@ class User:
         self.hist_allocated_throughput:List[float] = []
         self.hist_n_allocated_RBGs:List[int] = []
         self.hist_spectral_efficiency:List[float] = []
+        self.hist_avg_buff_lat:List[float] = []
+        self.hist_dropp_pkt_bits:List[float] = []
+        self.hist_arriv_pkt_bits:List[float] = []
+        self.hist_buff_pkt_bits:List[float] = []
     
     def __hist_update_after_transmit(self) -> None:
         self.hist_allocated_throughput.append(self.get_actual_throughput())
         self.hist_n_allocated_RBGs.append(len(self.rbgs))
+        self.hist_avg_buff_lat.append(self.get_avg_buffer_latency())
+        self.hist_dropp_pkt_bits.append(self.buff.get_dropp_pkts_bits(window=1))
+        self.hist_arriv_pkt_bits.append(self.buff.get_arriv_pkts_bits(window=1))
+        self.hist_buff_pkt_bits.append(self.buff.get_buff_bits())
     
     def __hist_update_after_arrive(self) -> None:
         self.hist_spectral_efficiency.append(self.SE)

@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Dict, List
 import json
+import numpy as np
 
 from simulation.jsonencoder import Encoder
 from simulation.slice import Slice
@@ -55,7 +56,7 @@ class Optimal(InterSliceScheduler):
         self.window = 1
         self.supposed_user_rbgs: Dict[int, int] = dict()
 
-    def schedule(self, slices: Dict[int, Slice], users: Dict[int, User], rbgs: List[RBG]):
+    def schedule(self, slices: Dict[int, Slice], users: Dict[int, User], rbgs: List[RBG]) -> None:
         model, results = optimize(
             slices=slices,
             users=users,
@@ -116,3 +117,106 @@ class Optimal(InterSliceScheduler):
         self.window += 1
         if self.window > self.window_max:
             self.window = self.window_max
+
+class OptimalHeuristic:
+    def __init__(
+        self,
+        rb_bandwidth: float,
+        rbs_per_rbg: int,
+        window_max: int,
+    ) -> None:
+        self.rb_bandwidth = rb_bandwidth
+        self.rbs_per_rbg = rbs_per_rbg
+        self.window_max = window_max
+        self.window = 1
+        self.offset = 0
+    
+    def _check_user_alloc_enough(self, ue_alloc_rbs: Dict[int, int], ue_min_rbs: Dict[int, int], slice: Slice) -> bool:
+        for u_id in slice.users.keys():
+            if ue_alloc_rbs[u_id] < ue_min_rbs[u_id]:
+                return False
+        return True
+
+    def schedule(self, slices: Dict[int, Slice], users: Dict[int, User], rbgs: List[RBG]) -> None:
+        n_rbgs = len(rbgs)
+        
+        ue_min_thr:Dict[int, float] = {}
+        ue_min_rbs:Dict[int, int] = {}
+        for u_id, u in users.items():
+            ue_min_thr[u_id] = self.get_min_ue_thr(u)
+            ue_min_rbs[u_id] = int(np.ceil((ue_min_thr[u_id] / (u.SE * self.rb_bandwidth * self.rbs_per_rbg))))
+        
+        ue_alloc_rbs:Dict[int, int] = {}
+        for u_id in users.keys():
+            ue_alloc_rbs[u_id] = 0
+        slice_min_rbs:Dict[int, int] = {}
+        for s_id, s in slices.items():
+            user_prior = s.get_round_robin_prior()
+            ue_offset = 0
+            while not self._check_user_alloc_enough(ue_alloc_rbs, ue_min_rbs, s):
+                ue_alloc_rbs[user_prior[ue_offset]] += 1
+                ue_offset = (ue_offset + 1) % len(user_prior)
+            slice_min_rbs[s_id] = sum(ue_alloc_rbs[u_id] for u_id in s.users)
+        
+        # If there are not enough resources for all slices,
+        # we allocate the resources proportionally to the minimum requirements
+        original_sum = sum(slice_min_rbs.values())
+        if original_sum > n_rbgs:
+            for s_id, s in slices.items():
+                slice_min_rbs[s_id] = int(slice_min_rbs[s_id]/original_sum * n_rbgs)
+            while sum(slice_min_rbs.values()) < n_rbgs: # Cycle through slices if there are still resources to allocate due to approximation
+                self.offset = self.offset % len(slices.keys())
+                s_id = list(slices.keys())[self.offset]
+                self.offset = (self.offset + 1) % len(slices.keys())
+                slice_min_rbs[s_id] += 1
+        
+        rbg_index = 0
+        for s_id, s in slices.items():
+            s.clear_rbg_allocation()
+            for _ in range(slice_min_rbs[s_id]):
+                s.allocate_rbg(rbgs[rbg_index])
+                rbg_index += 1
+        
+        self.window += 1
+        if self.window > self.window_max:
+            self.window = self.window_max
+            
+    
+    def get_min_ue_thr(self, user: User) -> float:
+        # print("Requirements (thr) for User {}".format(user.id))
+        min_thr = 0
+        if "throughput" in user.requirements:
+            min_thr = max(user.requirements["throughput"], min_thr)
+            # print("throughput req: {}".format(user.requirements["throughput"]/1e6))
+        if "latency" in user.requirements:
+            min_thr = max(
+                sum(user.get_n_buff_pkts_waited_i_TTIs(i) for i in range(user.requirements["latency"], user.get_max_lat()))*user.get_pkt_size()/user.TTI,
+                min_thr
+            )
+            # print("latency req: {}".format(sum(user.get_n_buff_pkts_waited_i_TTIs(i) for i in range(user.requirements["latency"], user.get_max_lat()))*user.get_pkt_size()/user.TTI/1e6))
+        if "long_term_thr" in user.requirements:
+            agg_thr = user.get_agg_thr(self.window-1) if self.window > 1 else 0
+            min_thr = max(
+                user.requirements["long_term_thr"]*self.window - agg_thr,
+                min_thr
+            )
+            # print("long_term_thr req: {}".format((user.requirements["long_term_thr"]*self.window - agg_thr)/1e6))
+        if "fifth_perc_thr" in user.requirements:
+            fif_req = min(user.requirements["fifth_perc_thr"], user.get_min_thr(self.window-1)) if self.window > 1 else user.requirements["fifth_perc_thr"]
+            min_thr = max(fif_req,min_thr)
+            # print("fifth_perc_thr req: {}".format(fif_req/1e6))
+        if "pkt_loss" in user.requirements:
+            denominator = user.get_buff_pkts(user.step-self.window+1) + user.get_last_arriv_pkts() + user.get_arriv_pkts(self.window)
+            max_dropp = int(denominator * user.requirements["pkt_loss"] - user.get_dropp_pkts(self.window))
+            dropp_max_lat = user.get_dropp_pkts(user.get_max_lat()-1)
+            dropp_buff_full = max(user.get_buff_pkts_now() - user.get_buffer_pkt_capacity(), 0)
+            need_to_send = 0
+            while(max(dropp_max_lat-need_to_send, 0) + max(dropp_buff_full-need_to_send, 0) > max_dropp):
+                need_to_send += 1
+            min_thr = max(
+                need_to_send*user.get_pkt_size()*user.TTI,
+                min_thr
+            )
+            # print("pkt_loss req: {}".format(need_to_send*user.get_pkt_size()*user.TTI/1e6))
+        return min_thr
+        

@@ -38,8 +38,13 @@ class Slice:
         self.step = 0
         self.users: Dict[int, User] = dict()
         self.rbgs: List[RBG] = []
-        
-        
+        self.hist_n_allocated_RBGs: List[RBG] =[]
+        self.hist_allocated_throughput:List[float] = []
+
+    def __hist_update_after_transmit(self) -> None:
+        self.hist_n_allocated_RBGs.append(sum(u.hist_n_allocated_RBGs[-1] for u in self.users.values()))
+        self.hist_allocated_throughput.append(np.mean([u.hist_allocated_throughput[-1] for u in self.users.values()]))
+    
     def generate_and_add_users(self, user_ids: List[int]) -> None:
         for id in user_ids:
             self.add_user(user_id=id)
@@ -73,6 +78,7 @@ class Slice:
         for u in self.users.values():
             u.transmit()
         self.step += 1
+        self.__hist_update_after_transmit()
     
     def allocate_rbg(self, rbg:RBG) -> None:
         self.rbgs.append(rbg)

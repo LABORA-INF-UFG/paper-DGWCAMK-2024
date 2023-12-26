@@ -6,6 +6,7 @@ from simulation.user import UserConfiguration, User
 from simulation.slice import SliceConfiguration
 from simulation.basestation import BaseStation
 from simulation.simulation import Simulation
+from simulation.plotter import Plotter
 
 def print_slice_avg_metrics(bs: BaseStation, window: int):
     print("\nAverage metrics for basestation {}".format(bs.id))
@@ -115,20 +116,32 @@ if __name__ == "__main__":
     
     from simulation import intersched, intrasched
 
-    opt_bs = sim.add_basestation(
-        inter_scheduler=intersched.Optimal(
+    # opt_bs = sim.add_basestation(
+    #     inter_scheduler=intersched.Optimal(
+    #         rb_bandwidth=sim.rb_bandwidth,
+    #         rbs_per_rbg= sim.rbs_per_rbg,
+    #         window_max=10,
+    #         e=1e-5,
+    #         allocate_all_resources=False,
+    #         method="cplex", # cplex, gurobi
+    #         verbose=False
+    #     ),
+    #     rbs_per_rbg=sim.rbs_per_rbg,
+    #     bandwidth=100e6, # 100MHz
+    #     seed = 1, # For generating random numbers
+    #     name = "optimal"
+    # )
+
+    optheur_bs = sim.add_basestation(
+        inter_scheduler=intersched.OptimalHeuristic(
             rb_bandwidth=sim.rb_bandwidth,
             rbs_per_rbg= sim.rbs_per_rbg,
             window_max=10,
-            e=1e-5,
-            allocate_all_resources=False,
-            method="gurobi",
-            verbose=False
         ),
         rbs_per_rbg=sim.rbs_per_rbg,
         bandwidth=100e6, # 100MHz
         seed = 1, # For generating random numbers
-        name = "optimal"
+        name = "heuristic"
     )
 
     rr_bs = sim.add_basestation(
@@ -139,7 +152,9 @@ if __name__ == "__main__":
         name = "roundrobin"
     )
 
-    bs_ids = [opt_bs, rr_bs]
+    # bs_ids = [opt_bs, rr_bs]
+    bs_ids = [optheur_bs, rr_bs]
+
     for bs_id in bs_ids:
         # Instantiating slices
         embb = sim.add_slice(
@@ -178,8 +193,8 @@ if __name__ == "__main__":
             slice_id=be,
             n_users=4
         )
-        print("Basestation {} users: {}".format(sim.basestations[bs_id].name, list(sim.basestations[bs_id].users.keys())))
-        print("Basestation {} slices: {}".format(sim.basestations[bs_id].name, list(sim.basestations[bs_id].slices.keys())))
+        #print("Basestation {} users: {}".format(sim.basestations[bs_id].name, list(sim.basestations[bs_id].users.keys())))
+        #print("Basestation {} slices: {}".format(sim.basestations[bs_id].name, list(sim.basestations[bs_id].slices.keys())))
     
     # Loading the spectral efficiency for each user
     SEs:Dict[int, List[float]] = dict()
@@ -218,7 +233,14 @@ if __name__ == "__main__":
         # for u in bs.users:
         #     sent_lists[u] = bs.users[u].buff.sent[:30]
 
-        sim.schedule_rbgs()
+        try:
+            sim.schedule_rbgs()
+        except Exception as e:
+            import traceback, sys
+            traceback.print_exception(*sys.exc_info())
+            print("Experiment stopped because of exception at step {}".format(_))
+            break
+        
         sim.transmit()
         
         # for u in bs.users:
@@ -235,17 +257,11 @@ if __name__ == "__main__":
         
         # #print_slice_avg_metrics(bs=sim.basestations[bs_id], window=10) # 10ms window
         # print_slice_worst_metrics(bs=sim.basestations[bs_id], window=10) # 10ms window
-    
 
     # Saving simulation data
     import pickle
     sim_data_file = open("simulation_data.pickle", "wb")
     pickle.dump(sim, file=sim_data_file)
     sim_data_file.close()
-    print("\nData saved in ./simulation_data.pickle, open it on console with:")
-    print("import pickle")
-    print("sim_data_file = open(\"simulation_data.pickle\", \"rb\")")
-    print("sim = pickle.load(sim_data_file)")
-    print("sim_data_file.close()")
-    print("Example of using sim data:")
-    print("sim.basestations[0].slices[0].users[0].buff.get_discrete_buffer(1e-3, 1024).buff")
+    print("\nData saved in ./simulation_data.pickle. Plot the simulation metrics with:")
+    print("python plot_metrics.py")

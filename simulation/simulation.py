@@ -25,8 +25,6 @@ class Simulation:
         self.step = 0
         self.basestation_id = 0
         self.basestations:Dict[int, BaseStation] = {}
-        self.slices:Dict[int, Slice] = {}
-        self.users:Dict[int, User] = {}
     
     def add_basestation(
         self,

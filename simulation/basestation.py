@@ -32,7 +32,11 @@ class BaseStation:
         self.rbgs:List[RBG] = []
         self.user_id = 0
         self.slice_id = 0
-    
+        self.hist_n_allocated_RBGs: List[int] = []
+
+    def __hist_update_after_transmit(self) -> None:
+        self.hist_n_allocated_RBGs.append(sum(s.hist_n_allocated_RBGs[-1] for s in self.slices.values()))
+
     def add_slice(
         self,
         slice_config: SliceConfiguration,
@@ -47,7 +51,7 @@ class BaseStation:
         )
         self.slice_id += 1
         return self.slice_id -1
-
+    
     def add_rbg(self, rbg:RBG) -> None:
         self.rbgs.append(rbg)
 
@@ -84,6 +88,7 @@ class BaseStation:
         for s in self.slices.values():
             s.transmit()
         self.step += 1
+        self.__hist_update_after_transmit()
     
     def schedule_rbgs(self) -> None:
         self.scheduler.schedule(
