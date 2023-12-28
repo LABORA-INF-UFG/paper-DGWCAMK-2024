@@ -1,5 +1,5 @@
 import os
-from typing import Dict, List
+from typing import Dict, List, Tuple
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -22,10 +22,17 @@ class Plotter:
         sub_carrier = 2
         file_base_string = "se/trial{}_f{}_ue{}.npy"
         plt.figure("Spectral Efficiency for Trial {} with {} sub carriers".format(trial, sub_carrier))
+        ue_SE: List[Tuple[int, List[float]]] = [0]*10
         for u in range(10):
             SE_file_string = file_base_string.format(trial, sub_carrier, u+1)
-            SE = list(np.load(SE_file_string)*multiplier)
-            plt.plot(SE, label="UE {}".format(u+1))
+            ue_SE[u] = (u, list(np.load(SE_file_string)*multiplier))
+            print("User {}: mean {} bits/s/Hz".format(u+1, np.mean(ue_SE[u][1])))
+        # Ordenar com base na média do ue_SE
+        ue_SE.sort(key=lambda x: np.mean(np.array(x[1])), reverse=True)
+        #print(ue_SE)
+
+        for u in range(10): 
+            plt.plot(ue_SE[u], label="UE {}".format(u+1))
         plt.xlabel("TTI")
         plt.ylabel("Spectral Efficiency")
         #plt.yticks(np.arange(0, 6, 0.5))
