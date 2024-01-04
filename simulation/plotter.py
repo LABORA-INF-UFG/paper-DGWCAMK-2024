@@ -17,21 +17,17 @@ class Plotter:
     def plot_SE_files(
         self,
         trial:int,
-        multiplier:float,
+        multipliers:Dict[int, float],
     ) -> None:
         sub_carrier = 2
         file_base_string = "se/trial{}_f{}_ue{}.npy"
         plt.figure("Spectral Efficiency for Trial {} with {} sub carriers".format(trial, sub_carrier))
-        ue_SE: List[Tuple[int, List[float]]] = [0]*10
+        ue_SE: Dict[int, List[float]] = {}
         for u in range(10):
             SE_file_string = file_base_string.format(trial, sub_carrier, u+1)
-            ue_SE[u] = (u, list(np.load(SE_file_string)*multiplier))
-            print("User {}: mean {} bits/s/Hz".format(u+1, np.mean(ue_SE[u][1])))
-        # Ordenar com base na média do ue_SE
-        ue_SE.sort(key=lambda x: np.mean(np.array(x[1])), reverse=True)
-        #print(ue_SE)
+            ue_SE[u] = list(np.load(SE_file_string)*multipliers[u+1])
 
-        for u in range(10): 
+        for u in range(10):
             plt.plot(ue_SE[u], label="UE {}".format(u+1))
         plt.xlabel("TTI")
         plt.ylabel("Spectral Efficiency")
@@ -103,7 +99,7 @@ class Plotter:
         plt.figure("Served throughput")
         for bs_id, bs in self.sim.basestations.items():
             for slice_id, slice in bs.slices.items():
-                plt.plot(slice.hist_allocated_throughput, label="{}-{}".format(slice.type, bs.name))
+                plt.plot(np.array(slice.hist_allocated_throughput)/1e6, label="{}-{}".format(slice.type, bs.name))
         plt.xlabel("TTI")
         plt.ylabel("Throughput")
         plt.legend()

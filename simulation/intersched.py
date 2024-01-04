@@ -187,24 +187,24 @@ class OptimalHeuristic:
         min_thr = 0
         if "throughput" in user.requirements:
             min_thr = max(user.requirements["throughput"], min_thr)
-            # print("throughput req: {}".format(user.requirements["throughput"]/1e6))
+            # print("throughput req: {:.2f}".format(user.requirements["throughput"]/1e6))
         if "latency" in user.requirements:
             min_thr = max(
                 sum(user.get_n_buff_pkts_waited_i_TTIs(i) for i in range(user.requirements["latency"], user.get_max_lat()))*user.get_pkt_size()/user.TTI,
                 min_thr
             )
-            # print("latency req: {}".format(sum(user.get_n_buff_pkts_waited_i_TTIs(i) for i in range(user.requirements["latency"], user.get_max_lat()))*user.get_pkt_size()/user.TTI/1e6))
+            # print("latency req: {:.2f}".format(sum(user.get_n_buff_pkts_waited_i_TTIs(i) for i in range(user.requirements["latency"], user.get_max_lat()))*user.get_pkt_size()/user.TTI/1e6))
         if "long_term_thr" in user.requirements:
             agg_thr = user.get_agg_thr(self.window-1) if self.window > 1 else 0
             min_thr = max(
                 user.requirements["long_term_thr"]*self.window - agg_thr,
                 min_thr
             )
-            # print("long_term_thr req: {}".format((user.requirements["long_term_thr"]*self.window - agg_thr)/1e6))
+            # print("long_term_thr req: {:.2f}".format((user.requirements["long_term_thr"]*self.window - agg_thr)/1e6))
         if "fifth_perc_thr" in user.requirements:
             fif_req = min(user.requirements["fifth_perc_thr"], user.get_min_thr(self.window-1)) if self.window > 1 else user.requirements["fifth_perc_thr"]
             min_thr = max(fif_req,min_thr)
-            # print("fifth_perc_thr req: {}".format(fif_req/1e6))
+            # print("fifth_perc_thr req: {:.2f}".format(fif_req/1e6))
         if "pkt_loss" in user.requirements:
             denominator = user.get_buff_pkts(user.step-self.window+1) + user.get_last_arriv_pkts() + user.get_arriv_pkts(self.window)
             max_dropp = int(denominator * user.requirements["pkt_loss"] - user.get_dropp_pkts(self.window))
@@ -217,6 +217,6 @@ class OptimalHeuristic:
                 need_to_send*user.get_pkt_size()*user.TTI,
                 min_thr
             )
-            # print("pkt_loss req: {}".format(need_to_send*user.get_pkt_size()*user.TTI/1e6))
+            # print("pkt_loss req: {:.2f}".format(need_to_send*user.get_pkt_size()*user.TTI/1e6))
         return min_thr
         

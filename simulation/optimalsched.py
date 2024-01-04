@@ -371,9 +371,10 @@ def optimize(
         )
         """
         # CONSTR: Average Buffer Latency intent (modified 4)
-        m.constr_l_u_intent.add(
-            remain_u_i[u,users[u].requirements["latency"]] <= 0
-        )
+        for i in range(users[u].requirements["latency"], users[u].get_max_lat()):
+            m.constr_l_u_intent.add(
+                remain_u_i[u,i] <= 0
+            )
 
         # Idea: add another avg buff lat constraint to guarantee the throughput for sending avg(buff[0:l_req]) pkts
         

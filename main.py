@@ -176,12 +176,6 @@ if __name__ == "__main__":
         )
 
         # Instantiating users
-        embb_users = sim.add_users(
-            basestation_id=bs_id,
-            slice_id=embb,
-            n_users=3
-        )
-
         urllc_users = sim.add_users(
             basestation_id=bs_id,
             slice_id=urllc,
@@ -193,18 +187,36 @@ if __name__ == "__main__":
             slice_id=be,
             n_users=4
         )
+        
+        embb_users = sim.add_users(
+            basestation_id=bs_id,
+            slice_id=embb,
+            n_users=3
+        )
+
         #print("Basestation {} users: {}".format(sim.basestations[bs_id].name, list(sim.basestations[bs_id].users.keys())))
         #print("Basestation {} slices: {}".format(sim.basestations[bs_id].name, list(sim.basestations[bs_id].slices.keys())))
     
     # Loading the spectral efficiency for each user
     SEs:Dict[int, List[float]] = dict()
-    SE_multiplier = 3.0
-    SE_trial = 36 # 1, ..., 50
+    SE_trial = 27 # 1, ..., 50
     SE_sub_carrier = 2 # 1, 2
     SE_file_base_string = "se/trial{}_f{}_ue{}.npy"
+    SE_multipliers = {
+        1: 3.0,
+        2: 3.0,
+        3: 3.0,
+        4: 3.0,
+        5: 3.0,
+        6: 3.0,
+        7: 3.0,
+        8: 2.0,
+        9: 2.0,
+        10: 2.0,
+    }
     for u in range(10):
         SE_file_string = SE_file_base_string.format(SE_trial, SE_sub_carrier, u+1)
-        SEs[u] = list(np.load(SE_file_string)*SE_multiplier)
+        SEs[u] = list(np.load(SE_file_string)*SE_multipliers[u+1])
     
     def set_users_spectral_efficiency(users:Dict[int, User], SEs: Dict[int, List[float]]):
         for u in users.values():

@@ -3,9 +3,22 @@ from simulation.plotter import Plotter
 if __name__ == "__main__":
     plotter = Plotter(None)
     #trials = [7, 18, 20, 27, 29, 30, 36, 37, 46, 50]
-    trials = range(1, 51)
+    #trials = range(1, 51)
+    trials = [27]
+    SE_multipliers = {
+        1: 3.0,
+        2: 3.0,
+        3: 3.0,
+        4: 3.0,
+        5: 3.0,
+        6: 3.0,
+        7: 2.0,
+        8: 2.0,
+        9: 1.0,
+        10: 1.0,
+    }
     for i in trials:
-        plotter.plot_SE_files(i, 1.0)
+        plotter.plot_SE_files(i, SE_multipliers)
 
 # Tentar o 46
 # Trial 9 tirando o UE 9

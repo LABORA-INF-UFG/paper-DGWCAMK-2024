@@ -165,7 +165,7 @@ class DiscreteBuffer():
         if sum_sent == 0:
             return 0
         else:
-            return sum(self.sent[i]*i for i in range(self.max_lat))/(sum(self.sent))
+            return sum(self.sent[i]*i for i in range(self.max_lat))/(sum_sent)
     
     """
     def _get_avg_buffer_TTI_latency(self) -> float: # Instantaneous latency for sent packets
