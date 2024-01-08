@@ -8,6 +8,7 @@ PIP dependencies:
 - numpy
 - pyomo
 - matplotlib
+- stable-baselines3
 
 Other dependencies:
 - CPLEX
