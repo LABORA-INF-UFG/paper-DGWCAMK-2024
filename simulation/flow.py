@@ -30,6 +30,10 @@ class Flow:
         self.rng = rng
         self.part_pkt_bits = 0.0
 
+    def reset(self) -> None:
+        self.step = 0
+        self.part_pkt_bits = 0.0
+
     def __generate_bits(self, time_interval:float): # Returns function
         if self.type == "poisson":
             return self.__generate_poisson(time_interval=time_interval)

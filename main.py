@@ -152,8 +152,19 @@ if __name__ == "__main__":
         name = "roundrobin"
     )
 
+    sac_bs = sim.add_basestation(
+        inter_scheduler=intersched.SAC(
+            window_max=10,
+            best_model_zip_path="./best_sac/best_model.zip"
+        ),
+        rbs_per_rbg=sim.rbs_per_rbg,
+        bandwidth=100e6, # 100MHz
+        seed = 1, # For generating random numbers
+        name = "sac"
+    )
+
     # bs_ids = [opt_bs, rr_bs]
-    bs_ids = [optheur_bs, rr_bs]
+    bs_ids = [optheur_bs, rr_bs, sac_bs]
 
     for bs_id in bs_ids:
         # Instantiating slices
@@ -222,6 +233,13 @@ if __name__ == "__main__":
         for u in users.values():
             u.set_spectral_efficiency(SEs[u.id][u.step])
             #u.set_spectral_efficiency(1.0)
+    
+    print("Creating combinations of choices for the sac agent...")
+    sim.basestations[sac_bs].scheduler.create_combinations(
+        n_rbgs=len(sim.basestations[sac_bs].rbgs),
+        n_slices=len(sim.basestations[sac_bs].slices),
+    )
+    print("Finished!")
 
     # Running 2000 TTIs = 2s
     TTIs = 2000
@@ -271,6 +289,7 @@ if __name__ == "__main__":
         # print_slice_worst_metrics(bs=sim.basestations[bs_id], window=10) # 10ms window
 
     # Saving simulation data
+    sim.basestations[sac_bs].scheduler = None
     import pickle
     sim_data_file = open("simulation_data.pickle", "wb")
     pickle.dump(sim, file=sim_data_file)

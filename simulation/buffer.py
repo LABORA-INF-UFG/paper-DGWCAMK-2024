@@ -39,6 +39,17 @@ class DiscreteBuffer():
         self.hist_sent_pkts: List[int] = []
         self.hist_buff_pkts: List[int] = []
     
+    def reset(self) -> None:
+        self.step = 0
+        self.buff = [0]*self.max_lat
+        self.sent = [0]*self.max_lat
+        self.partial_pkt_bits = 0.0
+        self.hist_dropp_max_lat_pkts: List[int] = []
+        self.hist_dropp_buffer_full_pkts: List[int] = []
+        self.hist_arriv_pkts: List[int] = []
+        self.hist_sent_pkts: List[int] = []
+        self.hist_buff_pkts: List[int] = []
+
     def get_arriv_pkts(self, window:int):
         if window < 1:
             raise Exception("window must be >= 1")

@@ -56,6 +56,20 @@ class User:
         self.hist_arriv_pkt_bits:List[float] = []
         self.hist_buff_pkt_bits:List[float] = []
     
+    def reset(self) -> None:
+        self.step = 0
+        self.SE = None
+        self.clear_rbg_allocation()
+        self.hist_allocated_throughput:List[float] = []
+        self.hist_n_allocated_RBGs:List[int] = []
+        self.hist_spectral_efficiency:List[float] = []
+        self.hist_avg_buff_lat:List[float] = []
+        self.hist_dropp_pkt_bits:List[float] = []
+        self.hist_arriv_pkt_bits:List[float] = []
+        self.hist_buff_pkt_bits:List[float] = []
+        self.buff.reset()
+        self.flow.reset()
+
     def __hist_update_after_transmit(self) -> None:
         self.hist_allocated_throughput.append(self.get_actual_throughput())
         self.hist_n_allocated_RBGs.append(len(self.rbgs))

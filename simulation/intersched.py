@@ -2,6 +2,8 @@ from abc import ABC, abstractmethod
 from typing import Dict, List
 import json
 import numpy as np
+from itertools import product
+import stable_baselines3
 
 from simulation.jsonencoder import Encoder
 from simulation.slice import Slice
@@ -118,7 +120,7 @@ class Optimal(InterSliceScheduler):
         if self.window > self.window_max:
             self.window = self.window_max
 
-class OptimalHeuristic:
+class OptimalHeuristic(InterSliceScheduler):
     def __init__(
         self,
         rb_bandwidth: float,
@@ -219,4 +221,99 @@ class OptimalHeuristic:
             )
             # print("pkt_loss req: {:.2f}".format(need_to_send*user.get_pkt_size()*user.TTI/1e6))
         return min_thr
+
+class DummyScheduler(InterSliceScheduler): # Used for training the RL agent
+    def __init__(self,) -> None:
+        self.allocation = None
+    
+    def set_allocation(self, allocation: Dict[int, int]) -> None:
+        self.allocation: Dict[int, int] = allocation
+
+    def schedule(self, slices: Dict[int, Slice], users: Dict[int, User], rbgs: List[RBG]) -> None:
+        rbg_index = 0
+        for s in slices.values():
+            s.clear_rbg_allocation()
+            for _ in range(self.allocation[s.id]):
+                s.allocate_rbg(rbgs[rbg_index])
+                rbg_index += 1
+
+class SAC(InterSliceScheduler):
+    def __init__(
+        self,
+        window_max: int,
+        best_model_zip_path: str,
+    ) -> None:
+        self.window_max = window_max
+        self.agent = stable_baselines3.SAC.load(best_model_zip_path, None, verbose=0)
+        self.action_space_options = None
+        self.window = 1
         
+    def create_combinations(self, n_rbgs: int, n_slices: int) -> None:
+        combinations = []
+        combs = product(range(0, n_rbgs + 1), repeat=n_slices)
+        for comb in combs:
+            if np.sum(comb) == n_rbgs:
+                combinations.append(comb)
+        self.action_space_options = np.asarray(combinations)
+
+    def get_lim_obs_space_array(self, slices: Dict[int, Slice]) -> np.array:
+        lim_obs_space = []
+        for s in slices.values(): # Requirements
+            lim_obs_space.extend(self.get_slice_obs_requirements(s))
+        for s in slices.values(): # Slice metrics
+            lim_obs_space.extend(self.get_slice_obs_metrics(s)) 
+        return np.array(lim_obs_space)
+
+    def get_slice_obs_requirements(self, s: Slice) -> np.array:
+        requirements = []
+        if s.type == "embb" or s.type == "urllc":
+            requirements.append(s.requirements["latency"])
+            requirements.append(s.requirements["throughput"])
+            requirements.append(s.requirements["pkt_loss"])
+        elif s.type == "be":
+            requirements.append(s.requirements["long_term_thr"])
+            requirements.append(s.requirements["fifth_perc_thr"])
+        return np.array(requirements)
+
+    def get_slice_obs_metrics(self, s: Slice) -> np.array:
+        metrics = []
+        metrics.append(s.get_avg_se()) # Spectral efficiency (bits/s/Hz)
+        metrics.append(s.get_served_thr()) # Served throughput (Mbps)
+        metrics.append(s.get_sent_thr(window=1)) # Effective throughput (Mbps)
+        metrics.append(s.get_buffer_occupancy()) # Buffer occupancy (rate)
+        metrics.append(s.get_pkt_loss_rate(window=self.window)) # Packet loss rate (rate)
+        metrics.append(s.get_arriv_thr(window=1)) # Requested throughput (Mbps)
+        metrics.append(s.get_avg_buffer_latency()) # Average buffer latency (ms)
+        metrics.append(s.get_long_term_thr(window=self.window)) # Long-term served throughput (Mbps)
+        metrics.append(s.get_fifth_perc_thr(window=self.window)) # Fifth-percentile served throughput (Mbps)
+        return np.array(metrics)
+    
+    def schedule(self, slices: Dict[int, Slice], users: Dict[int, User], rbgs: List[RBG]) -> None:
+        if self.action_space_options is None:
+            raise Exception("Combinations not created for the inter scheduler")
+        
+        obs = self.get_lim_obs_space_array(slices)
+        action, _states = self.agent.predict(obs, deterministic=True)
+
+        rbs_allocation = (
+            ((action + 1) / np.sum(action + 1)) * len(rbgs)
+            if np.sum(action + 1) != 0
+            else np.ones(action.shape[0])
+            * (1 / action.shape[0])
+            * len(rbgs)
+        )
+        action_idx = np.argmin(
+            np.sum(np.abs(self.action_space_options - rbs_allocation), axis=1)
+        )
+        action_values = self.action_space_options[action_idx]
+        allocation = dict(zip(slices.keys(), action_values))
+        rbg_index = 0
+        for s in slices.values():
+            s.clear_rbg_allocation()
+            for _ in range(allocation[s.id]):
+                s.allocate_rbg(rbgs[rbg_index])
+                rbg_index += 1
+        
+        self.window += 1
+        if self.window > self.window_max:
+            self.window = self.window_max

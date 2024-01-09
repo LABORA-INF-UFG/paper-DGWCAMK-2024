@@ -2,3 +2,5 @@ simulation/__pycache__/*
 *.pickle
 plots/*
 *.bin
+evaluations/*
+nohup.out

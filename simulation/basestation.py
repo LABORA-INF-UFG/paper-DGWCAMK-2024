@@ -34,6 +34,14 @@ class BaseStation:
         self.slice_id = 0
         self.hist_n_allocated_RBGs: List[int] = []
 
+    def reset(self) -> None:
+        self.step = 0
+        self.hist_n_allocated_RBGs = []
+        for s in self.slices.values():
+            s.reset()
+        for u in self.users.values():
+            u.reset()
+
     def __hist_update_after_transmit(self) -> None:
         self.hist_n_allocated_RBGs.append(sum(s.hist_n_allocated_RBGs[-1] for s in self.slices.values()))
 

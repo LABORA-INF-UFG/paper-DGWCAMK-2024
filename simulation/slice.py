@@ -41,6 +41,12 @@ class Slice:
         self.hist_n_allocated_RBGs: List[RBG] =[]
         self.hist_allocated_throughput:List[float] = []
 
+    def reset(self) -> None:
+        self.step = 0
+        self.clear_rbg_allocation()
+        self.hist_n_allocated_RBGs: List[RBG] =[]
+        self.hist_allocated_throughput:List[float] = []
+
     def __hist_update_after_transmit(self) -> None:
         self.hist_n_allocated_RBGs.append(sum(u.hist_n_allocated_RBGs[-1] for u in self.users.values()))
         self.hist_allocated_throughput.append(np.mean([u.hist_allocated_throughput[-1] for u in self.users.values()]))
@@ -89,6 +95,22 @@ class Slice:
     def schedule_rbgs(self) -> None:
         self.scheduler.schedule(rbgs=self.rbgs, users=self.users)
 
+    def get_avg_se(self) -> float:
+        if len(self.users) == 0:
+            return 0
+        result = 0.0
+        for u in self.users.values():
+            result += u.SE
+        return result/len(self.users)
+
+    def get_served_thr(self) -> float:
+        if len(self.users) == 0 or self.step == 0:
+            return 0
+        result = 0.0
+        for u in self.users.values():
+            result += u.get_actual_throughput()
+        return result/len(self.users)
+
     def get_buffer_occupancy(self) -> float:
         if len(self.users) == 0:
             return 0
@@ -114,7 +136,7 @@ class Slice:
         return result/len(self.users)
     
     def get_sent_thr(self, window:int) -> float:
-        if len(self.users) == 0:
+        if len(self.users) == 0 or self.step == 0:
             return 0
         result = 0.0
         for u in self.users.values():
@@ -129,6 +151,22 @@ class Slice:
             result += u.get_arriv_thr(window)
         return result/len(self.users)
     
+    def get_long_term_thr(self, window:int) -> float:
+        if len(self.users) == 0 or self.step == 0:
+            return 0
+        result = 0.0
+        for u in self.users.values():
+            result += u.get_long_term_thr(window)
+        return result/len(self.users)
+
+    def get_fifth_perc_thr(self, window:int) -> float:
+        if len(self.users) == 0 or self.step == 0:
+            return 0
+        result = 0.0
+        for u in self.users.values():
+            result += u.get_fifth_perc_thr(window)
+        return result/len(self.users)
+
     def get_worst_user_rrbgs(self) -> (int, int):
         worst_metric = len(list(self.users.values())[0].rbgs)
         worst_user = list(self.users.values())[0].id
