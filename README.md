@@ -9,7 +9,6 @@ PIP dependencies:
 - pyomo
 - matplotlib
 - stable-baselines3
-- callbacks
 
 Other dependencies:
 - CPLEX
