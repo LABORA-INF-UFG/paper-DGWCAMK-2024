@@ -126,10 +126,12 @@ class OptimalHeuristic(InterSliceScheduler):
         rb_bandwidth: float,
         rbs_per_rbg: int,
         window_max: int,
+        use_all_resources: bool = False,
     ) -> None:
         self.rb_bandwidth = rb_bandwidth
         self.rbs_per_rbg = rbs_per_rbg
         self.window_max = window_max
+        self.use_all_resources = use_all_resources
         self.window = 1
         self.offset = 0
     
@@ -161,16 +163,23 @@ class OptimalHeuristic(InterSliceScheduler):
             slice_min_rbs[s_id] = sum(ue_alloc_rbs[u_id] for u_id in s.users)
         
         # If there are not enough resources for all slices,
-        # we allocate the resources proportionally to the minimum requirements
-        original_sum = sum(slice_min_rbs.values())
-        if original_sum > n_rbgs:
-            for s_id, s in slices.items():
-                slice_min_rbs[s_id] = int(slice_min_rbs[s_id]/original_sum * n_rbgs)
-            while sum(slice_min_rbs.values()) < n_rbgs: # Cycle through slices if there are still resources to allocate due to approximation
-                self.offset = self.offset % len(slices.keys())
-                s_id = list(slices.keys())[self.offset]
-                self.offset = (self.offset + 1) % len(slices.keys())
-                slice_min_rbs[s_id] += 1
+        # we allocate all resources proportionally to the minimum requirements
+        if sum(slice_min_rbs.values()) > n_rbgs or self.use_all_resources:
+            rbs_allocation = (np.array(list(slice_min_rbs.values()))/sum(slice_min_rbs.values()))*len(rbgs)
+            action_approx = [int(np.floor(i)) for i in rbs_allocation]
+            while sum(action_approx) < len(rbgs):
+                action_approx[np.argmin(np.abs(rbs_allocation - (np.array(action_approx)+1)))] += 1
+            slice_min_rbs = dict(zip(slice_min_rbs.keys(), action_approx))
+        
+        # original_sum = sum(slice_min_rbs.values())
+        # if original_sum > n_rbgs:
+        #     for s_id, s in slices.items():
+        #         slice_min_rbs[s_id] = int(slice_min_rbs[s_id]/original_sum * n_rbgs)
+        #     while sum(slice_min_rbs.values()) < n_rbgs: # Cycle through slices if there are still resources to allocate due to approximation
+        #         self.offset = self.offset % len(slices.keys())
+        #         s_id = list(slices.keys())[self.offset]
+        #         self.offset = (self.offset + 1) % len(slices.keys())
+        #         slice_min_rbs[s_id] += 1
         
         rbg_index = 0
         for s_id, s in slices.items():
@@ -289,12 +298,8 @@ class SAC(InterSliceScheduler):
         return np.array(metrics)
     
     def schedule(self, slices: Dict[int, Slice], users: Dict[int, User], rbgs: List[RBG]) -> None:
-        if self.action_space_options is None:
-            raise Exception("Combinations not created for the inter scheduler")
-        
         obs = self.get_lim_obs_space_array(slices)
         action, _states = self.agent.predict(obs, deterministic=True)
-
         rbs_allocation = (
             ((action + 1) / np.sum(action + 1)) * len(rbgs)
             if np.sum(action + 1) != 0
@@ -302,11 +307,17 @@ class SAC(InterSliceScheduler):
             * (1 / action.shape[0])
             * len(rbgs)
         )
-        action_idx = np.argmin(
-            np.sum(np.abs(self.action_space_options - rbs_allocation), axis=1)
-        )
-        action_values = self.action_space_options[action_idx]
-        allocation = dict(zip(slices.keys(), action_values))
+        action_approx = [int(np.floor(i)) for i in rbs_allocation]
+        while sum(action_approx) < len(rbgs):
+            action_approx[np.argmin(np.abs(rbs_allocation - (np.array(action_approx)+1)))] += 1
+
+        # action_idx = np.argmin(
+        #     np.sum(np.abs(self.action_space_options - rbs_allocation), axis=1)
+        # )
+        # action_values = self.action_space_options[action_idx]
+        #allocation = dict(zip(slices.keys(), action_values))
+        allocation = dict(zip(slices.keys(), action_approx))
+        #print(allocation)
         rbg_index = 0
         for s in slices.values():
             s.clear_rbg_allocation()

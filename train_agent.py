@@ -65,6 +65,7 @@ if __name__ == "__main__":
     sim = Simulation(
         option_5g=0, # TTI = 1ms
         rbs_per_rbg=4,
+        experiment_name="train"
     )
     
     from simulation import intersched, intrasched

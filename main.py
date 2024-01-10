@@ -1,3 +1,4 @@
+import sys
 import numpy as np
 from tqdm import tqdm
 from typing import List, Dict
@@ -58,8 +59,12 @@ def print_slice_worst_metrics(bs: BaseStation, window: int):
 
 if __name__ == "__main__":
     
-    # Configuring slices
+    if len(sys.argv) != 2 or sys.argv[1] not in ["full", "standard", "minimum"]:
+        print("Usage: python main.py <experiment_name>")
+        print("Experiment name must be standard, full, or minimum")
+        exit(1)
 
+    # Configuring slices
     embb_config = SliceConfiguration(
         type="embb",
         requirements={
@@ -112,6 +117,7 @@ if __name__ == "__main__":
     sim = Simulation(
         option_5g=0, # TTI = 1ms
         rbs_per_rbg=4,
+        experiment_name=sys.argv[1]
     )
     
     from simulation import intersched, intrasched
@@ -137,6 +143,7 @@ if __name__ == "__main__":
             rb_bandwidth=sim.rb_bandwidth,
             rbs_per_rbg= sim.rbs_per_rbg,
             window_max=10,
+            use_all_resources=True if sim.experiment_name == "full" else False,
         ),
         rbs_per_rbg=sim.rbs_per_rbg,
         bandwidth=100e6, # 100MHz
@@ -210,7 +217,7 @@ if __name__ == "__main__":
     
     # Loading the spectral efficiency for each user
     SEs:Dict[int, List[float]] = dict()
-    SE_trial = 27 # 1, ..., 50
+    SE_trial = 46 # 1, ..., 50, use 27 for the standard experiment
     SE_sub_carrier = 2 # 1, 2
     SE_file_base_string = "se/trial{}_f{}_ue{}.npy"
     SE_multipliers = {
@@ -234,65 +241,106 @@ if __name__ == "__main__":
             u.set_spectral_efficiency(SEs[u.id][u.step])
             #u.set_spectral_efficiency(1.0)
     
-    print("Creating combinations of choices for the sac agent...")
-    sim.basestations[sac_bs].scheduler.create_combinations(
-        n_rbgs=len(sim.basestations[sac_bs].rbgs),
-        n_slices=len(sim.basestations[sac_bs].slices),
-    )
-    print("Finished!")
+
+    # print("Creating combinations of choices for the sac agent...")
+    # sim.basestations[sac_bs].scheduler.create_combinations(
+    #     n_rbgs=len(sim.basestations[sac_bs].rbgs),
+    #     n_slices=len(sim.basestations[sac_bs].slices),
+    # )
+    # print("Finished!")
 
     # Running 2000 TTIs = 2s
     TTIs = 2000
-    for _ in tqdm(range(TTIs), leave=False, desc="TTIs"):
-        for bs_id in bs_ids:
-            set_users_spectral_efficiency(users=sim.basestations[bs_id].users, SEs=SEs)
-        # bs_id = 0
-        # bs = sim.basestations[0]
-        
-        # print([u.SE for u in bs.users.values()])
-        sim.arrive_packets()
-        
-        # for u in bs.users:
-        #     if u in bs.slices[2].users:
-        #         continue
-        #     print("Buffer for user {}: {}".format(u, bs.users[u].buff.buff[:30]))
-        
-        # print("Step",_)
-        
-        # sent_lists:Dict[int, List[int]] = dict()
-        # for u in bs.users:
-        #     sent_lists[u] = bs.users[u].buff.sent[:30]
-
-        try:
+    if sim.experiment_name in ["standard", "full"]:
+        for _ in tqdm(range(TTIs), leave=False, desc="TTIs"):
+            for bs_id in bs_ids:
+                set_users_spectral_efficiency(users=sim.basestations[bs_id].users, SEs=SEs)
+            sim.arrive_packets()
             sim.schedule_rbgs()
-        except Exception as e:
-            import traceback, sys
-            traceback.print_exception(*sys.exc_info())
-            print("Experiment stopped because of exception at step {}".format(_))
-            break
+            sim.transmit()
+    elif sim.experiment_name == "minimum": # Minimum RBGs for every agent
+        for _ in tqdm(range(TTIs), leave=False, desc="TTIs"):
+            for bs_id in bs_ids:
+                set_users_spectral_efficiency(users=sim.basestations[bs_id].users, SEs=SEs)
+            
+            sim.arrive_packets()
+
+            # Optimal heuristic
+            sim.basestations[optheur_bs].schedule_rbgs()
+            n_lim_rbgs = sum(len(s.rbgs) for s in sim.basestations[optheur_bs].slices.values())
+
+            # Round robin
+            sim.basestations[rr_bs].scheduler.schedule(
+                slices=sim.basestations[rr_bs].slices,
+                users=sim.basestations[rr_bs].users,
+                rbgs=sim.basestations[rr_bs].rbgs[:n_lim_rbgs] # Limited RBGs
+            )
+            for s in sim.basestations[rr_bs].slices.values():
+                s.schedule_rbgs()
+            
+            # SAC
+            sim.basestations[sac_bs].scheduler.schedule(
+                slices=sim.basestations[sac_bs].slices,
+                users=sim.basestations[sac_bs].users,
+                rbgs=sim.basestations[sac_bs].rbgs[:n_lim_rbgs] # Limited RBGs
+            )
+            for s in sim.basestations[sac_bs].slices.values():
+                s.schedule_rbgs()
+
+            sim.transmit()
+            
+    # Removed because the optimal scheduler is not used
+    # for _ in tqdm(range(TTIs), leave=False, desc="TTIs"):
+    #     for bs_id in bs_ids:
+    #         set_users_spectral_efficiency(users=sim.basestations[bs_id].users, SEs=SEs)
+    #     # bs_id = 0
+    #     # bs = sim.basestations[0]
         
-        sim.transmit()
+    #     # print([u.SE for u in bs.users.values()])
+    #     sim.arrive_packets()
         
-        # for u in bs.users:
-        #     if u in bs.slices[2].users:
-        #         continue
-        #     sent_lists[u] = list(np.array(bs.users[u].buff.sent[:30]) - np.array(sent_lists[u]))
-        #     print("Sent pkt list for user {}: {}".format(u, sent_lists[u]))
-        #     if sum(np.array(sent_lists[u]) - np.array(sim.basestations[bs_id].scheduler.sent_lists[u])) != 0:
-        #         raise Exception("Theoretical and real sent packets are different")
-        # #     print("Sent packets for user {}: {}".format(
-        # #         u,
-        # #         bs.users[u].get_last_sent_pkts()
-        # #     ))
+    #     # for u in bs.users:
+    #     #     if u in bs.slices[2].users:
+    #     #         continue
+    #     #     print("Buffer for user {}: {}".format(u, bs.users[u].buff.buff[:30]))
         
-        # #print_slice_avg_metrics(bs=sim.basestations[bs_id], window=10) # 10ms window
-        # print_slice_worst_metrics(bs=sim.basestations[bs_id], window=10) # 10ms window
+    #     # print("Step",_)
+        
+    #     # sent_lists:Dict[int, List[int]] = dict()
+    #     # for u in bs.users:
+    #     #     sent_lists[u] = bs.users[u].buff.sent[:30]
+
+    #     try:
+    #         sim.schedule_rbgs()
+    #     except Exception as e:
+    #         import traceback, sys
+    #         traceback.print_exception(*sys.exc_info())
+    #         print("Experiment stopped because of exception at step {}".format(_))
+    #         break
+        
+    #     sim.transmit()
+        
+    #     # for u in bs.users:
+    #     #     if u in bs.slices[2].users:
+    #     #         continue
+    #     #     sent_lists[u] = list(np.array(bs.users[u].buff.sent[:30]) - np.array(sent_lists[u]))
+    #     #     print("Sent pkt list for user {}: {}".format(u, sent_lists[u]))
+    #     #     if sum(np.array(sent_lists[u]) - np.array(sim.basestations[bs_id].scheduler.sent_lists[u])) != 0:
+    #     #         raise Exception("Theoretical and real sent packets are different")
+    #     # #     print("Sent packets for user {}: {}".format(
+    #     # #         u,
+    #     # #         bs.users[u].get_last_sent_pkts()
+    #     # #     ))
+        
+    #     # #print_slice_avg_metrics(bs=sim.basestations[bs_id], window=10) # 10ms window
+    #     # print_slice_worst_metrics(bs=sim.basestations[bs_id], window=10) # 10ms window
 
     # Saving simulation data
     sim.basestations[sac_bs].scheduler = None
     import pickle
-    sim_data_file = open("simulation_data.pickle", "wb")
+    path = "./{}_experiment_data.pickle".format(sim.experiment_name)
+    sim_data_file = open(path, "wb")
     pickle.dump(sim, file=sim_data_file)
     sim_data_file.close()
-    print("\nData saved in ./simulation_data.pickle. Plot the simulation metrics with:")
-    print("python plot_metrics.py")
+    print("\nData saved in {}. Plot the simulation metrics with:".format(path))
+    print("python plot_metrics.py {}".format(sim.experiment_name))

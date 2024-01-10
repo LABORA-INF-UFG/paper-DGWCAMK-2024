@@ -14,11 +14,13 @@ class Simulation:
         self,
         option_5g: int,
         rbs_per_rbg: int,
+        experiment_name: str,
     ) -> None:
         if option_5g < 0 or option_5g > 4:
             raise Exception("Option = {} is not valid for the simulation (must be 0, 1, 2, 3 or 4)".format(option_5g))
         self.option_5g = option_5g
         self.rbs_per_rbg = rbs_per_rbg
+        self.experiment_name = experiment_name
         self.TTI:float = 2**-option_5g * 1e-3 # s
         self.sub_carrier_width:float = 2**option_5g * 15e3 # Hz
         self.rb_bandwidth:float = 12 * self.sub_carrier_width # Hz
