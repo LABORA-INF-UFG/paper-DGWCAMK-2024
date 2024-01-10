@@ -21,21 +21,28 @@ if __name__ == "__main__":
         10: 2.0,
     }
     trial = 47
+    density = 20
 
     print("Plotting metrics...")
     sim_data_file = open("{}_experiment_data.pickle".format(sys.argv[1]), "rb")
     sim = pickle.load(sim_data_file)
     sim_data_file.close()
     plotter = Plotter(sim)
-    plotter.plot_slice_SE(trial, SE_multipliers, density=20)
-    plotter.plot_slice_worst_SE(trial, SE_multipliers, density=20)
-    plotter.plot_bs_RBG_allocation(density=20, bs_names=["sac", "heuristic"])
-    plotter.plot_slice_RBG_allocation(density=20, bs_names=["sac", "heuristic"])
-    plotter.plot_slice_throughput(density=20, bs_names=["sac", "heuristic"], slice_types=["embb", "urllc"])
-    plotter.plot_slice_fifth_perc_thr(window=10, density=20, bs_names=["sac", "heuristic"], slice_types=["be"])
-    plotter.plot_slice_long_term_thr(window=10, density=20, bs_names=["sac", "heuristic"], slice_types=["be"])
-    plotter.plot_slice_avg_buff_lat(density=20, bs_names=["sac", "heuristic"], slice_types=["embb", "urllc"])
-    plotter.plot_slice_pkt_loss_rate(window=10, density=20, bs_names=["sac", "heuristic"], slice_types=["embb", "urllc"])
+    plotter.plot_slice_SE(trial, SE_multipliers, density=density)
+    plotter.plot_slice_worst_SE(trial, SE_multipliers, density=density)
+    plotter.plot_bs_RBG_allocation(density=density, normalize=True, bs_names=["sac", "heuristic", "roundrobin"])
+    plotter.plot_slice_RBG_allocation(density=density, normalize=True, bs_names=["sac", "heuristic", "roundrobin"], slice_types=["embb"])
+    plotter.plot_slice_RBG_allocation(density=density, normalize=True, bs_names=["sac", "heuristic", "roundrobin"], slice_types=["urllc"])
+    plotter.plot_slice_RBG_allocation(density=density, normalize=True, bs_names=["sac", "heuristic", "roundrobin"], slice_types=["be"])
+    plotter.plot_slice_throughput(density=density, bs_names=["sac", "heuristic", "roundrobin"], slice_types=["embb"])
+    plotter.plot_slice_throughput(density=density, bs_names=["sac", "heuristic", "roundrobin"], slice_types=["urllc"])
+    plotter.plot_slice_fifth_perc_thr(window=10, density=density, bs_names=["sac", "heuristic", "roundrobin"], slice_types=["be"])
+    plotter.plot_slice_long_term_thr(window=10, density=density, bs_names=["sac", "heuristic", "roundrobin"], slice_types=["be"])
+    plotter.plot_slice_avg_buff_lat(density=density, bs_names=["sac", "heuristic", "roundrobin"], slice_types=["embb"])
+    plotter.plot_slice_avg_buff_lat(density=density, bs_names=["sac", "heuristic", "roundrobin"], slice_types=["urllc"])
+    plotter.plot_slice_pkt_loss_rate(window=10, density=density, bs_names=["sac", "heuristic", "roundrobin"], slice_types=["embb"])
+    plotter.plot_slice_pkt_loss_rate(window=10, density=density, bs_names=["sac", "heuristic", "roundrobin"], slice_types=["urllc"])
+
     print("Finished!")
 
 # TODO: Add worst user plotting
