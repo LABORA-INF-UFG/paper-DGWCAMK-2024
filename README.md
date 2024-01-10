@@ -9,6 +9,7 @@ PIP dependencies:
 - pyomo
 - matplotlib
 - stable-baselines3
+- seaborn
 
 Other dependencies:
 - CPLEX
