@@ -3,8 +3,8 @@ from simulation.plotter import Plotter
 if __name__ == "__main__":
     plotter = Plotter(None)
     #trials = [7, 18, 20, 27, 29, 30, 36, 37, 46, 50]
-    trials = range(1, 51)
-    #trials = [27] # 46
+    #trials = range(1, 51)
+    trials = [47]
     SE_multipliers = {
         1: 3.0,
         2: 3.0,

@@ -2,6 +2,7 @@ import sys
 import numpy as np
 from tqdm import tqdm
 from typing import List, Dict
+import time 
 
 from simulation.user import UserConfiguration, User
 from simulation.slice import SliceConfiguration
@@ -270,20 +271,24 @@ if __name__ == "__main__":
             n_lim_rbgs = sum(len(s.rbgs) for s in sim.basestations[optheur_bs].slices.values())
 
             # Round robin
+            start = time.time()
             sim.basestations[rr_bs].scheduler.schedule(
                 slices=sim.basestations[rr_bs].slices,
                 users=sim.basestations[rr_bs].users,
                 rbgs=sim.basestations[rr_bs].rbgs[:n_lim_rbgs] # Limited RBGs
             )
+            sim.basestations[rr_bs].scheduler_elapsed_time.append(time.time() - start)
             for s in sim.basestations[rr_bs].slices.values():
                 s.schedule_rbgs()
             
             # SAC
+            start = time.time()
             sim.basestations[sac_bs].scheduler.schedule(
                 slices=sim.basestations[sac_bs].slices,
                 users=sim.basestations[sac_bs].users,
                 rbgs=sim.basestations[sac_bs].rbgs[:n_lim_rbgs] # Limited RBGs
             )
+            sim.basestations[sac_bs].scheduler_elapsed_time.append(time.time() - start)
             for s in sim.basestations[sac_bs].slices.values():
                 s.schedule_rbgs()
 
@@ -337,8 +342,9 @@ if __name__ == "__main__":
 
     # Saving simulation data
     sim.basestations[sac_bs].scheduler = None
-    import pickle
-    path = "./{}_experiment_data.pickle".format(sim.experiment_name)
+    import pickle, os
+    os.makedirs("./experiment_data/", exist_ok=True)
+    path = "./experiment_data/{}_experiment_data.pickle".format(sim.experiment_name)
     sim_data_file = open(path, "wb")
     pickle.dump(sim, file=sim_data_file)
     sim_data_file.close()

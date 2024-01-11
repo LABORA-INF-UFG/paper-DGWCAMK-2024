@@ -4,6 +4,7 @@ import json
 import numpy as np
 from itertools import product
 import stable_baselines3
+import time
 
 from simulation.jsonencoder import Encoder
 from simulation.slice import Slice
@@ -22,7 +23,7 @@ class RoundRobin(InterSliceScheduler):
         offset: int = 0
     ) -> None:
         self.offset = offset
-    
+
     def schedule(self, slices: Dict[int, Slice], users: Dict[int, User], rbgs: List[RBG]):
         ids = []
         for s in slices.values(): # Considering the number of users per slice
@@ -33,7 +34,6 @@ class RoundRobin(InterSliceScheduler):
         for r in rbgs:
             slices[ids[self.offset]].allocate_rbg(r)
             self.offset = (self.offset + 1) % len(ids)
-    
     def __str__(self) -> str:
         return json.dumps(self.__dict__, cls=Encoder, indent=2)
     
@@ -212,9 +212,10 @@ class OptimalHeuristic(InterSliceScheduler):
                 min_thr
             )
             # print("long_term_thr req: {:.2f}".format((user.requirements["long_term_thr"]*self.window - agg_thr)/1e6))
-        if "fifth_perc_thr" in user.requirements:
-            fif_req = min(user.requirements["fifth_perc_thr"], user.get_min_thr(self.window-1)) if self.window > 1 else user.requirements["fifth_perc_thr"]
-            min_thr = max(fif_req,min_thr)
+        if "fifth_perc_thr" in user.requirements: 
+            min_thr = max(user.requirements["fifth_perc_thr"], min_thr) # Considering window <= 19
+            # fif_req = min(user.requirements["fifth_perc_thr"], user.get_min_thr(self.window-1)) if self.window > 1 else user.requirements["fifth_perc_thr"]
+            # min_thr = max(fif_req,min_thr)
             # print("fifth_perc_thr req: {:.2f}".format(fif_req/1e6))
         if "pkt_loss" in user.requirements:
             denominator = user.get_buff_pkts(user.step-self.window+1) + user.get_last_arriv_pkts() + user.get_arriv_pkts(self.window)
@@ -310,7 +311,6 @@ class SAC(InterSliceScheduler):
         action_approx = [int(np.floor(i)) for i in rbs_allocation]
         while sum(action_approx) < len(rbgs):
             action_approx[np.argmin(np.abs(rbs_allocation - (np.array(action_approx)+1)))] += 1
-
         # action_idx = np.argmin(
         #     np.sum(np.abs(self.action_space_options - rbs_allocation), axis=1)
         # )

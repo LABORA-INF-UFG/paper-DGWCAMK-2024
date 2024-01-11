@@ -26,7 +26,7 @@ class Plotter:
     ) -> None:
         sub_carrier = 2
         file_base_string = "se/trial{}_f{}_ue{}.npy"
-        plt.figure("Spectral Efficiency for Trial {} with {} sub carriers".format(trial, sub_carrier))
+        plt.figure()
         ue_SE: Dict[int, List[float]] = {}
         for u in range(10):
             SE_file_string = file_base_string.format(trial, sub_carrier, u+1)
@@ -34,20 +34,22 @@ class Plotter:
 
         for u in range(10):
             downsampled = [np.mean(ue_SE[u][i:i+density]) for i in range(0, len(ue_SE[u]), density)]
-            x_ticks = np.arange(0, self.sim.step, density)
+            x_ticks = np.arange(0, 2000, density)
             plt.plot(x_ticks, downsampled, label="UE {}".format(u+1))
         plt.xlabel("Time (ms)")
         plt.ylabel("Spectral efficiency (bits/s/Hz)")
         #plt.yticks(np.arange(0, 6, 0.5))
         #plt.ylim(0, 1)
-        plt.legend(loc="upper center", bbox_to_anchor=(0.5, 1.15), ncol=5)
-        plt.savefig(self.path_SE + "trial{}_f{}.pdf".format(trial, sub_carrier))
+        # plt.legend(loc="best", bbox_to_anchor=(0.5, 1.15), ncol=5)
+        plt.title("Spectral Efficiency for Trial {} with {} sub carriers".format(trial, sub_carrier))
+        plt.legend(ncol=1, bbox_to_anchor=(1.25, 0.5), loc='right')
+        plt.savefig(self.path_SE + "trial{}_f{}.pdf".format(trial, sub_carrier), bbox_inches='tight')
         plt.close('all')
 
     def plot_slice_SE(self, trial: int, multipliers:Dict[int, float], density: int = 1) -> None:
         sub_carrier = 2
         file_base_string = "se/trial{}_f{}_ue{}.npy"
-        plt.figure("Spectral efficiency per slice for Trial {}".format(trial))
+        plt.figure()
         ue_SE: Dict[int, List[float]] = {}
         for u in range(10):
             SE_file_string = file_base_string.format(trial, sub_carrier, u+1)
@@ -59,14 +61,15 @@ class Plotter:
             plt.plot(x_ticks, downsampled, label="{}".format(s.type))
         plt.xlabel("Time (ms)")
         plt.ylabel("Spectral efficiency (bits/s/Hz)")
-        plt.legend(loc="upper center", bbox_to_anchor=(0.5, 1.15), ncol=5)
-        plt.savefig(self.root_path + "slice_se.pdf")
+        plt.title("Spectral efficiency per slice for Trial {}".format(trial))
+        plt.legend(ncol=1, loc=(1.02, 0.4))
+        plt.savefig(self.root_path + "slice_se.pdf", bbox_inches='tight')
         plt.close('all')
 
     def plot_slice_worst_SE(self, trial: int, multipliers:Dict[int, float], density: int = 1) -> None:
         sub_carrier = 2
         file_base_string = "se/trial{}_f{}_ue{}.npy"
-        plt.figure("Worst spectral efficiency per slice for Trial {}".format(trial))
+        plt.figure()
         ue_SE: Dict[int, List[float]] = {}
         for u in range(10):
             SE_file_string = file_base_string.format(trial, sub_carrier, u+1)
@@ -78,20 +81,21 @@ class Plotter:
             plt.plot(x_ticks, downsampled, label="{}".format(s.type))
         plt.xlabel("Time (ms)")
         plt.ylabel("Spectral efficiency (bits/s/Hz)")
-        plt.legend(loc="upper center", bbox_to_anchor=(0.5, 1.15), ncol=5)
-        plt.savefig(self.root_path + "slice_worst_se.pdf")
+        plt.title("Worst spectral efficiency per slice for Trial {}".format(trial))
+        plt.legend(ncol=1, loc=(1.02, 0.4))
+        plt.savefig(self.root_path + "slice_worst_se.pdf", bbox_inches='tight')
         plt.close('all')
 
     def plot_bs_RBG_allocation(self, density: int = 1, bs_names: List[str] = None, normalize: bool = False):
-        plt.figure("RBG allocation per basestation")
+        plt.figure()
         for bs_id, bs in self.sim.basestations.items():
             if bs_names is not None and bs.name not in bs_names:
                 continue
             if normalize:
-                metric = np.array(bs.hist_n_allocated_RBGs)/len(bs.rbgs)
+                metric = np.array(bs.hist_n_allocated_RBGs)/len(bs.rbgs)*100
             else:
-                metric = bs.hist_n_allocated_RBGs
-            downsampled = [np.mean(bs.hist_n_allocated_RBGs[i:i+density]) for i in range(0, len(bs.hist_n_allocated_RBGs), density)]
+                metric = np.array(bs.hist_n_allocated_RBGs) * 100
+            downsampled = [np.mean(metric[i:i+density]) for i in range(0, len(bs.hist_n_allocated_RBGs), density)]
             x_ticks = np.arange(0, self.sim.step, density)
             plt.plot(x_ticks, downsampled, label="{}".format(bs.name))
         plt.xlabel("Time (ms)")
@@ -99,15 +103,13 @@ class Plotter:
             plt.ylabel("Resource usage (%)")
         else:
             plt.ylabel("# of RBGs")
-        plt.legend(loc="upper center", bbox_to_anchor=(0.5, 1.15), ncol=5)
-        plt.savefig(self.path + "bs_rbg_allocation.pdf")
+        plt.title("RBG allocation per basestation")
+        plt.legend(ncol=1, loc=(1.02, 0.4))
+        plt.savefig(self.path + "bs_rbg_allocation.pdf", bbox_inches='tight')
         plt.close('all')
     
     def plot_slice_RBG_allocation(self, density: int = 1, bs_names: List[str] = None, slice_types: List[str] = None, normalize = False):
-        if slice_types is not None and len(slice_types) == 1:
-            plt.figure("RBG allocation for {}".format(slice_types[0]))
-        else:
-            plt.figure("RBG allocation per slice")
+        plt.figure()
         for bs_id, bs in self.sim.basestations.items():
             if bs_names is not None and bs.name not in bs_names:
                 continue
@@ -115,9 +117,9 @@ class Plotter:
                 if slice_types is not None and slice.type not in slice_types:
                     continue
                 if normalize:
-                    metric = np.array(slice.hist_n_allocated_RBGs)/len(bs.rbgs)
+                    metric = np.array(slice.hist_n_allocated_RBGs)/len(bs.rbgs) * 100
                 else:
-                    metric = slice.hist_n_allocated_RBGs
+                    metric = np.array(slice.hist_n_allocated_RBGs) * 100
                 downsampled = [np.mean(metric[i:i+density]) for i in range(0, len(slice.hist_n_allocated_RBGs), density)]
                 x_ticks = np.arange(0, self.sim.step, density)
                 if slice_types is not None and len(slice_types) == 1:
@@ -129,22 +131,25 @@ class Plotter:
             plt.ylabel("Resource usage (%)")
         else:
             plt.ylabel("# of RBGs")
-        plt.legend(loc="upper center", bbox_to_anchor=(0.5, 1.15), ncol=5)
-        if slice_types is None:
-            plt.savefig(self.path + "slice_rbg_allocation.pdf")
+        if slice_types is not None and len(slice_types) == 1:
+            plt.title("RBG allocation for {}".format(slice_types[0]))
         else:
-            plt.savefig(self.path + "_".join(slice_types) +"_rbg_allocation.pdf")
+            plt.title("RBG allocation per slice")
+        plt.legend(ncol=1, loc=(1.02, 0.4))
+        if slice_types is None:
+            plt.savefig(self.path + "slice_rbg_allocation.pdf", bbox_inches='tight')
+        else:
+            plt.savefig(self.path + "_".join(slice_types) +"_rbg_allocation.pdf", bbox_inches='tight')
         plt.close('all')
     
     def plot_slice_fifth_perc_thr(self, window: int, density: int = 1, bs_names: List[str] = None, slice_types: List[str] = None, value:str = "average"):
         if value not in ["average", "worst"]:
             raise Exception("Value must be average or worst")
         plot_requirement = False
+        plt.figure()
         if slice_types is not None and len(slice_types) == 1:
-            plt.figure("Fifth-percentile throughput of {}".format(slice_types[0]))
             plot_requirement = True
-        else:
-            plt.figure("Fifth-percentile throughput")
+        
         for bs_id, bs in self.sim.basestations.items():
             if bs_names is not None and bs.name not in bs_names:
                 continue
@@ -175,7 +180,11 @@ class Plotter:
                     plt.plot(x_ticks, downsampled, label="{}-{}".format(slice.type, bs.name))
         plt.xlabel("Time (ms)")
         plt.ylabel("Throughput (Mbps)")
-        plt.legend(loc="upper center", bbox_to_anchor=(0.5, 1.15), ncol=5)
+        if slice_types is not None and len(slice_types) == 1:
+            plt.title("Fifth-percentile throughput of {}".format(slice_types[0]))
+        else:
+            plt.title("Fifth-percentile throughput")
+        plt.legend(ncol=1, loc=(1.02, 0.4))
         filename = "fifth_perc_thr.pdf"
         if value == "worst":
             filename = "worst_" + filename
@@ -183,18 +192,16 @@ class Plotter:
             filename = "slice_" + filename
         else:
             filename = "_".join(slice_types) + "_" + filename
-        plt.savefig(self.path + filename)
+        plt.savefig(self.path + filename, bbox_inches='tight')
         plt.close('all')
     
     def plot_slice_long_term_thr(self, window: int, density: int = 1, bs_names: List[str] = None, slice_types: List[str] = None, value:str = "average"):
         if value not in ["average", "worst"]:
             raise Exception("Value must be average or worst")
         plot_requirement = False
+        plt.figure()
         if slice_types is not None and len(slice_types) == 1:
-            plt.figure("Long term throughput of {}".format(slice_types[0]))
             plot_requirement = True
-        else:
-            plt.figure("Long term throughput")
         for bs_id, bs in self.sim.basestations.items():
             if bs_names is not None and bs.name not in bs_names:
                 continue
@@ -225,7 +232,11 @@ class Plotter:
                     plt.plot(x_ticks, downsampled, label="{}-{}".format(slice.type, bs.name))
         plt.xlabel("Time (ms)")
         plt.ylabel("Throughput (Mbps)")
-        plt.legend(loc="upper center", bbox_to_anchor=(0.5, 1.15), ncol=5)
+        if slice_types is not None and len(slice_types) == 1:
+            plt.title("Long term throughput of {}".format(slice_types[0]))
+        else:
+            plt.title("Long term throughput")
+        plt.legend(ncol=1, loc=(1.02, 0.4))
         filename = "long_term_thr.pdf"
         if value == "worst":
             filename = "worst_" + filename
@@ -233,7 +244,7 @@ class Plotter:
             filename = "slice_" + filename
         else:
             filename = "_".join(slice_types) + "_" + filename
-        plt.savefig(self.path + filename)
+        plt.savefig(self.path + filename, bbox_inches='tight')
         plt.close('all')
     
     def plot_slice_throughput(self, density: int = 1, bs_names: List[str] = None, slice_types: List[str] = None, value:str = "average"):
@@ -241,10 +252,7 @@ class Plotter:
             raise Exception("Value must be average or worst")
         plot_requirement = False
         if slice_types is not None and len(slice_types) == 1:
-            plt.figure("Served throughput of {}".format(slice_types[0]))
             plot_requirement = True
-        else:
-            plt.figure("Served throughput")
         for bs_id, bs in self.sim.basestations.items():
             if bs_names is not None and bs.name not in bs_names:
                 continue
@@ -266,7 +274,11 @@ class Plotter:
                     plt.plot(x_ticks, downsampled, label="{}-{}".format(slice.type, bs.name))
         plt.xlabel("Time (ms)")
         plt.ylabel("Throughput (Mbps)")
-        plt.legend(loc="upper center", bbox_to_anchor=(0.5, 1.15), ncol=5)
+        if slice_types is not None and len(slice_types) == 1:
+            plt.title("Served throughput of {}".format(slice_types[0]))
+        else:
+            plt.title("Served throughput")
+        plt.legend(ncol=1, loc=(1.02, 0.4))
         filename = "served_thr.pdf"
         if value == "worst":
             filename = "worst_" + filename
@@ -274,18 +286,16 @@ class Plotter:
             filename = "slice_" + filename
         else:
             filename = "_".join(slice_types) + "_" + filename
-        plt.savefig(self.path + filename)
+        plt.savefig(self.path + filename, bbox_inches='tight')
         plt.close('all')
     
     def plot_slice_avg_buff_lat(self, density: int = 1, bs_names: List[str] = None, slice_types: List[str] = None, value:str = "average"):
         if value not in ["average", "worst"]:
             raise Exception("Value must be average or worst")
         plot_requirement = False
+        plt.figure()
         if slice_types is not None and len(slice_types) == 1:
-            plt.figure("Average Buffer Latency of {}".format(slice_types[0]))
             plot_requirement = True
-        else:
-            plt.figure("Average Buffer Latency")
         for bs_id, bs in self.sim.basestations.items():
             if bs_names is not None and bs.name not in bs_names:
                 continue
@@ -314,7 +324,11 @@ class Plotter:
                     plt.plot(x_ticks, downsampled, label="{}-{}".format(slice.type, bs.name))
         plt.xlabel("Time (ms)")
         plt.ylabel("Latency (ms)")
-        plt.legend(loc="upper center", bbox_to_anchor=(0.5, 1.15), ncol=5)
+        if slice_types is not None and len(slice_types) == 1:
+            plt.title("Average Buffer Latency of {}".format(slice_types[0]))
+        else:
+            plt.title("Average Buffer Latency")
+        plt.legend(ncol=1, loc=(1.02, 0.4))
         filename = "avg_buff_lat.pdf"
         if value == "worst":
             filename = "worst_" + filename
@@ -322,18 +336,16 @@ class Plotter:
             filename = "slice_" + filename
         else:
             filename = "_".join(slice_types) + "_" + filename
-        plt.savefig(self.path + filename)
+        plt.savefig(self.path + filename, bbox_inches='tight')
         plt.close('all')
     
     def plot_slice_pkt_loss_rate(self, window: int, density: int = 1, bs_names: List[str] = None, slice_types: List[str] = None, value:str = "average"):
         if value not in ["average", "worst"]:
             raise Exception("Value must be average or worst")
         plot_requirement = False
+        plt.figure()
         if slice_types is not None and len(slice_types) == 1:
-            plt.figure("Packet Loss Rate of {} for {}TTIs window".format(slice_types[0], window))
             plot_requirement = True
-        else:
-            plt.figure("Packet Loss Rate for {}TTIs window".format(window))
         for bs_id, bs in self.sim.basestations.items():
             if bs_names is not None and bs.name not in bs_names:
                 continue
@@ -369,7 +381,11 @@ class Plotter:
                     plt.plot(x_ticks, downsampled, label="{}-{}".format(slice.type, bs.name))
         plt.xlabel("Time (ms)")
         plt.ylabel("Rate (%)")	
-        plt.legend(loc="upper center", bbox_to_anchor=(0.5, 1.15), ncol=5)
+        if slice_types is not None and len(slice_types) == 1:
+            plt.title("Packet Loss Rate of {} for {}TTIs window".format(slice_types[0], window))
+        else:
+            plt.title("Packet Loss Rate for {}TTIs window".format(window))
+        plt.legend(ncol=1, loc=(1.02, 0.4))
         filename = "pkt_loss.pdf"
         if value == "worst":
             filename = "worst_" + filename
@@ -377,5 +393,5 @@ class Plotter:
             filename = "slice_" + filename
         else:
             filename = "_".join(slice_types) + "_" + filename
-        plt.savefig(self.path + filename)
+        plt.savefig(self.path + filename, bbox_inches='tight')
         plt.close('all')

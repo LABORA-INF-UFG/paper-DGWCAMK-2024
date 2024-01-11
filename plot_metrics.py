@@ -4,7 +4,7 @@ import sys
 
 if __name__ == "__main__":
     if len(sys.argv) != 2 or sys.argv[1] not in ["full", "standard", "minimum"]:
-        print("Usage: python main.py <experiment_name>")
+        print("Usage: python plot_metrics.py <experiment_name>")
         print("Experiment name must be standard, full, or minimum")
         exit(1)
     
@@ -24,7 +24,7 @@ if __name__ == "__main__":
     density = 20
 
     print("Plotting metrics...")
-    sim_data_file = open("{}_experiment_data.pickle".format(sys.argv[1]), "rb")
+    sim_data_file = open("experiment_data/{}_experiment_data.pickle".format(sys.argv[1]), "rb")
     sim = pickle.load(sim_data_file)
     sim_data_file.close()
     plotter = Plotter(sim)

@@ -1,6 +1,7 @@
 import numpy as np
 import json
 from typing import List, Dict
+import time
 
 from simulation.jsonencoder import Encoder
 from simulation.rb import RB
@@ -33,10 +34,12 @@ class BaseStation:
         self.user_id = 0
         self.slice_id = 0
         self.hist_n_allocated_RBGs: List[int] = []
+        self.scheduler_elapsed_time: List[float] = []
 
     def reset(self) -> None:
         self.step = 0
         self.hist_n_allocated_RBGs = []
+        self.scheduler_elapsed_time = []
         for s in self.slices.values():
             s.reset()
         for u in self.users.values():
@@ -99,11 +102,13 @@ class BaseStation:
         self.__hist_update_after_transmit()
     
     def schedule_rbgs(self) -> None:
+        start = time.time()
         self.scheduler.schedule(
             slices=self.slices,
             users=self.users,
             rbgs=self.rbgs
         )
+        self.scheduler_elapsed_time.append(time.time() - start)
         for s in self.slices.values():
             s.schedule_rbgs()
 
