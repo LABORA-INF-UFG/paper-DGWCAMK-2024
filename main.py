@@ -10,53 +10,53 @@ from simulation.basestation import BaseStation
 from simulation.simulation import Simulation
 from simulation.plotter import Plotter
 
-def print_slice_avg_metrics(bs: BaseStation, window: int):
-    print("\nAverage metrics for basestation {}".format(bs.id))
-    for s in bs.slices.values():
-        print("\nAverage metrics for {} slice".format(s.type))
-        print("Received {} RBGs".format(len(s.rbgs)))
-        print("Average buffer latency: {:.2f}ms".format(s.get_avg_buffer_latency()*1e3))
-        print("Buffer occupancy: {:.2f}%".format(s.get_buffer_occupancy()*100))
-        print("Arrived throughput in the last {}ms: {:.2f}Mbps".format(
-            window,
-            s.get_pkt_thr(window)/1e6 # bits/s -> Mbps
-        ))
-        print("Sent throughput in the last {}ms: {:.2f}Mbps".format(
-            window,
-            s.get_sent_thr(window)/1e6 # bits/s -> Mbps
-        ))
-        print("Packet loss rate for the last {}ms: {:.2f}%".format(
-            window,
-            s.get_pkt_loss_rate(window)*100
-        ))
+# def print_slice_avg_metrics(bs: BaseStation, window: int):
+#     print("\nAverage metrics for basestation {}".format(bs.id))
+#     for s in bs.slices.values():
+#         print("\nAverage metrics for {} slice".format(s.type))
+#         print("Received {} RBGs".format(len(s.rbgs)))
+#         print("Average buffer latency: {:.2f}ms".format(s.get_avg_buffer_latency()*1e3))
+#         print("Buffer occupancy: {:.2f}%".format(s.get_buffer_occupancy()*100))
+#         print("Arrived throughput in the last {}ms: {:.2f}Mbps".format(
+#             window,
+#             s.get_pkt_thr(window)/1e6 # bits/s -> Mbps
+#         ))
+#         print("Sent throughput in the last {}ms: {:.2f}Mbps".format(
+#             window,
+#             s.get_sent_thr(window)/1e6 # bits/s -> Mbps
+#         ))
+#         print("Packet loss rate for the last {}ms: {:.2f}%".format(
+#             window,
+#             s.get_pkt_loss_rate(window)*100
+#         ))
 
-def print_slice_worst_metrics(bs: BaseStation, window: int):
-    used_rbgs = sum(len(s.rbgs) for s in bs.slices.values())
-    print("\nWorst metrics for basestation {} using {}/{} RBGs".format(bs.id, used_rbgs, len(bs.rbgs)))
-    for s in bs.slices.values():
-        print("\nWorst metrics for {} slice".format(s.type))
-        print("Received {} RBGs".format(len(s.rbgs)))
+# def print_slice_worst_metrics(bs: BaseStation, window: int):
+#     used_rbgs = sum(len(s.rbgs) for s in bs.slices.values())
+#     print("\nWorst metrics for basestation {} using {}/{} RBGs".format(bs.id, used_rbgs, len(bs.rbgs)))
+#     for s in bs.slices.values():
+#         print("\nWorst metrics for {} slice".format(s.type))
+#         print("Received {} RBGs".format(len(s.rbgs)))
 
-        user, metric = s.get_worst_user_spectral_eff()
-        print("Minimum spectral efficiency: user {} with {:.2f}bits/s".format(user, metric))
+#         user, metric = s.get_worst_user_spectral_eff()
+#         print("Minimum spectral efficiency: user {} with {:.2f}bits/s".format(user, metric))
 
-        user, metric = s.get_worst_user_rrbgs()
-        print("Minimum RBGs: user {} with {} RBGs".format(user, metric))
+#         user, metric = s.get_worst_user_rrbgs()
+#         print("Minimum RBGs: user {} with {} RBGs".format(user, metric))
 
-        user, metric = s.get_worst_user_avg_buff_lat()
-        print("Maximum average buffer latency: user {} with {:.2f}ms".format(user, metric*1e3)) # s -> ms
+#         user, metric = s.get_worst_user_avg_buff_lat()
+#         print("Maximum average buffer latency: user {} with {:.2f}ms".format(user, metric*1e3)) # s -> ms
 
-        user, metric = s.get_worst_user_buff_occ()
-        print("Maximum buffer occupancy: user {} with {:.2f}%".format(user, metric*100)) # [0,1] -> %
+#         user, metric = s.get_worst_user_buff_occ()
+#         print("Maximum buffer occupancy: user {} with {:.2f}%".format(user, metric*100)) # [0,1] -> %
         
-        user, metric = s.get_worst_user_arriv_thr(window)
-        print("Maximum arrived throughput in the last {}ms: user {} with {:.2f}Mbps".format(window, user, metric/1e6)) # bits/s -> Mbps
+#         user, metric = s.get_worst_user_arriv_thr(window)
+#         print("Maximum arrived throughput in the last {}ms: user {} with {:.2f}Mbps".format(window, user, metric/1e6)) # bits/s -> Mbps
         
-        user, metric = s.get_worst_user_sent_thr(window)
-        print("Minimum sent throughput in the last {}ms: user {} with {:.2f}Mbps".format(window, user, metric/1e6)) # bits/s -> Mbps
+#         user, metric = s.get_worst_user_sent_thr(window)
+#         print("Minimum sent throughput in the last {}ms: user {} with {:.2f}Mbps".format(window, user, metric/1e6)) # bits/s -> Mbps
         
-        user, metric = s.get_worst_user_pkt_loss(window)
-        print("Maximum packet loss rate for the last {}ms: user {} with {:.2f}%".format(window, user, metric*100)) # [0,1] -> %
+#         user, metric = s.get_worst_user_pkt_loss(window)
+#         print("Maximum packet loss rate for the last {}ms: user {} with {:.2f}%".format(window, user, metric*100)) # [0,1] -> %
 
 if __name__ == "__main__":
     
@@ -149,7 +149,8 @@ if __name__ == "__main__":
         rbs_per_rbg=sim.rbs_per_rbg,
         bandwidth=100e6, # 100MHz
         seed = 1, # For generating random numbers
-        name = "heuristic"
+        name = "heuristic",
+        window_max=10,
     )
 
     rr_bs = sim.add_basestation(
@@ -157,7 +158,8 @@ if __name__ == "__main__":
         rbs_per_rbg=sim.rbs_per_rbg,
         bandwidth=100e6, # 100MHz
         seed = 1, # For generating random numbers
-        name = "roundrobin"
+        name = "roundrobin",
+        window_max=10,
     )
 
     sac_bs = sim.add_basestation(
@@ -168,7 +170,8 @@ if __name__ == "__main__":
         rbs_per_rbg=sim.rbs_per_rbg,
         bandwidth=100e6, # 100MHz
         seed = 1, # For generating random numbers
-        name = "sac"
+        name = "sac",
+        window_max=10,
     )
 
     # bs_ids = [opt_bs, rr_bs]
@@ -221,18 +224,32 @@ if __name__ == "__main__":
     SE_trial = 46 # 1, ..., 50, use 27 for the standard experiment
     SE_sub_carrier = 2 # 1, 2
     SE_file_base_string = "se/trial{}_f{}_ue{}.npy"
+
     SE_multipliers = {
-        1: 3.0,
-        2: 3.0,
-        3: 3.0,
-        4: 3.0,
-        5: 3.0,
-        6: 3.0,
-        7: 3.0,
+        1: 1.0,
+        2: 1.0,
+        3: 1.0,
+        4: 2.0,
+        5: 2.0,
+        6: 2.0,
+        7: 2.0,
         8: 2.0,
         9: 2.0,
         10: 2.0,
     }
+    # SE_multipliers = {
+    #     1: 1.0,
+    #     2: 1.0,
+    #     3: 1.0,
+    #     4: 1.0,
+    #     5: 1.0,
+    #     6: 1.0,
+    #     7: 1.0,
+    #     8: 1.0,
+    #     9: 1.0,
+    #     10: 1.0,
+    # }
+
     for u in range(10):
         SE_file_string = SE_file_base_string.format(SE_trial, SE_sub_carrier, u+1)
         SEs[u] = list(np.load(SE_file_string)*SE_multipliers[u+1])

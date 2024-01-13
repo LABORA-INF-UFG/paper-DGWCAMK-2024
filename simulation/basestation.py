@@ -20,6 +20,7 @@ class BaseStation:
         rb_bandwidth: float, # Hz
         scheduler: InterSliceScheduler,
         rng:np.random.BitGenerator,
+        window_max: int,
     ) -> None:
         self.id = id
         self.name = name
@@ -27,17 +28,20 @@ class BaseStation:
         self.rb_bandwidth = rb_bandwidth
         self.scheduler = scheduler
         self.rng = rng
+        self.window_max = window_max
         self.step = 0
         self.slices: Dict[int, Slice] = {}
         self.users: Dict[int, User] = {}
         self.rbgs:List[RBG] = []
         self.user_id = 0
         self.slice_id = 0
+        self.window = 1
         self.hist_n_allocated_RBGs: List[int] = []
         self.scheduler_elapsed_time: List[float] = []
 
     def reset(self) -> None:
         self.step = 0
+        self.window = 1
         self.hist_n_allocated_RBGs = []
         self.scheduler_elapsed_time = []
         for s in self.slices.values():
@@ -59,6 +63,7 @@ class BaseStation:
             scheduler=intra_scheduler,
             TTI=self.TTI,
             rng=self.rng,
+            window_max=self.window_max,
         )
         self.slice_id += 1
         return self.slice_id -1
@@ -99,6 +104,9 @@ class BaseStation:
         for s in self.slices.values():
             s.transmit()
         self.step += 1
+        self.window += 1
+        if self.window > self.window_max:
+            self.window = self.window_max
         self.__hist_update_after_transmit()
     
     def schedule_rbgs(self) -> None:

@@ -34,6 +34,7 @@ class Simulation:
         bandwidth: float,
         rbs_per_rbg: int,
         name: str,
+        window_max: int,
         seed: int = None,
     ) -> int:
         self.basestations[self.basestation_id] = BaseStation(
@@ -42,7 +43,8 @@ class Simulation:
             TTI=self.TTI,
             rb_bandwidth=self.rb_bandwidth,
             scheduler=inter_scheduler,
-            rng=np.random.default_rng(seed=seed)
+            rng=np.random.default_rng(seed=seed),
+            window_max=window_max,
         )
         n_rbs = int(bandwidth/self.rb_bandwidth)
         n_rbgs = int(n_rbs/rbs_per_rbg)

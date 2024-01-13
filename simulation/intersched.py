@@ -149,7 +149,9 @@ class OptimalHeuristic(InterSliceScheduler):
         for u_id, u in users.items():
             ue_min_thr[u_id] = self.get_min_ue_thr(u)
             ue_min_rbs[u_id] = int(np.ceil((ue_min_thr[u_id] / (u.SE * self.rb_bandwidth * self.rbs_per_rbg))))
-        
+            # if "long_term_thr" in u.requirements:
+            #     print ("Ue {} will have long term thr of {}".format(u_id, (sum(u.hist_allocated_throughput[-(u.window-1):] + ue_min_rbs[u_id]*u.SE*self.rb_bandwidth*self.rbs_per_rbg))/u.window/1e6))
+            #     print("UE {} historical thr: {}".format(u.id, np.array(u.hist_allocated_throughput[-(u.window-1):])/1e6))
         ue_alloc_rbs:Dict[int, int] = {}
         for u_id in users.keys():
             ue_alloc_rbs[u_id] = 0
@@ -211,7 +213,8 @@ class OptimalHeuristic(InterSliceScheduler):
                 user.requirements["long_term_thr"]*self.window - agg_thr,
                 min_thr
             )
-            # print("long_term_thr req: {:.2f}".format((user.requirements["long_term_thr"]*self.window - agg_thr)/1e6))
+            # if user.step > 1 and user.requirements["long_term_thr"]*self.window - agg_thr > 0:
+            #     print("UE {} step {} prev: {:.2f} vs long_term req: {:.2f} had {} RBGs".format(user.id, user.step, user.hist_long_term_thr[-1]/1e6, float(user.requirements["long_term_thr"]*self.window - agg_thr)/1e6, user.hist_n_allocated_RBGs[-1]))
         if "fifth_perc_thr" in user.requirements: 
             min_thr = max(user.requirements["fifth_perc_thr"], min_thr) # Considering window <= 19
             # fif_req = min(user.requirements["fifth_perc_thr"], user.get_min_thr(self.window-1)) if self.window > 1 else user.requirements["fifth_perc_thr"]

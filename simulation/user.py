@@ -37,11 +37,14 @@ class User:
         TTI: float, # s
         config: UserConfiguration,
         rng: np.random.BitGenerator,
+        window_max: int,
     ) -> None:
         self.id = id
         self.config = config
         self.rng = rng
+        self.window_max = window_max
         self.step = 0
+        self.window = 1
         self.TTI = TTI
         self.buff = DiscreteBuffer(TTI=TTI, config=config.buff_config)
         self.flow = Flow(TTI=TTI, config=config.flow_config, rng=self.rng)
@@ -54,10 +57,14 @@ class User:
         self.hist_avg_buff_lat:List[float] = []
         self.hist_dropp_pkt_bits:List[float] = []
         self.hist_arriv_pkt_bits:List[float] = []
-        self.hist_buff_pkt_bits:List[float] = []
-    
+        self.hist_buff_pkt_bits:List[float] = [0.0]
+        self.hist_fifth_perc_thr:List[float] = []
+        self.hist_long_term_thr:List[float] = []
+        self.hist_pkt_loss:List[float] = []
+
     def reset(self) -> None:
         self.step = 0
+        self.window = 1
         self.SE = None
         self.clear_rbg_allocation()
         self.hist_allocated_throughput:List[float] = []
@@ -66,7 +73,10 @@ class User:
         self.hist_avg_buff_lat:List[float] = []
         self.hist_dropp_pkt_bits:List[float] = []
         self.hist_arriv_pkt_bits:List[float] = []
-        self.hist_buff_pkt_bits:List[float] = []
+        self.hist_buff_pkt_bits:List[float] = [0.0]
+        self.hist_fifth_perc_thr:List[float] = []
+        self.hist_long_term_thr:List[float] = []
+        self.hist_pkt_loss:List[float] = []
         self.buff.reset()
         self.flow.reset()
 
@@ -76,6 +86,14 @@ class User:
         self.hist_avg_buff_lat.append(self.get_avg_buffer_latency())
         self.hist_dropp_pkt_bits.append(self.buff.get_dropp_pkts_bits(window=1))
         self.hist_arriv_pkt_bits.append(self.buff.get_arriv_pkts_bits(window=1))
+        self.hist_fifth_perc_thr.append(np.percentile(self.hist_allocated_throughput[-self.window:], 5))
+        self.hist_long_term_thr.append(np.mean(self.hist_allocated_throughput[-self.window:]))
+        numerator = int(sum(self.hist_dropp_pkt_bits[-self.window:]))
+        denominator = int(sum(self.hist_arriv_pkt_bits[-self.window:]) + self.hist_buff_pkt_bits[self.step-self.window+1])
+        if denominator == 0:
+            self.hist_pkt_loss.append(0)
+        else:
+            self.hist_pkt_loss.append(float(numerator/denominator))
         self.hist_buff_pkt_bits.append(self.buff.get_buff_bits())
     
     def __hist_update_after_arrive(self) -> None:
@@ -97,6 +115,9 @@ class User:
         self.buff.transmit(throughput=self.get_actual_throughput())
         self.__hist_update_after_transmit()
         self.step += 1
+        self.window += 1
+        if self.window > self.window_max:
+            self.window = self.window_max
 
     def set_spectral_efficiency(self, SE: float) -> None:
         self.SE = SE

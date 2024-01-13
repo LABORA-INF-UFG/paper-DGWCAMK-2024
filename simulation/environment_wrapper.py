@@ -44,9 +44,9 @@ class Env(gymnasium.Env):
             shape=(self.obs_space_length, ),
             dtype=np.float32,
         )
-        self.action_space_options = self.create_combinations(
-            len(self.bs.rbgs), len(self.bs.slices)
-        )
+        # self.action_space_options = self.create_combinations(
+        #     len(self.bs.rbgs), len(self.bs.slices)
+        # )
 
         # Will be incremented by the reset when the training starts
         self.trial_index = -1 
@@ -111,12 +111,11 @@ class Env(gymnasium.Env):
             * (1 / action.shape[0])
             * len(self.bs.rbgs)
         )
-        action_idx = np.argmin(
-            np.sum(np.abs(self.action_space_options - rbs_allocation), axis=1)
-        )
-        action_values = self.action_space_options[action_idx]
-        
-        self.bs.scheduler.set_allocation(dict(zip(self.bs.slices.keys(), action_values)))
+        action_approx = [int(np.floor(i)) for i in rbs_allocation]
+        while sum(action_approx) < len(self.bs.rbgs):
+            action_approx[np.argmin(np.abs(rbs_allocation - (np.array(action_approx)+1)))] += 1
+
+        self.bs.scheduler.set_allocation(dict(zip(self.bs.slices.keys(), action_approx)))
         self.bs.schedule_rbgs()
         self.bs.transmit()
         self.bs.arrive_pkts()

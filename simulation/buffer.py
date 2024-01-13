@@ -139,7 +139,6 @@ class DiscreteBuffer():
             raise Exception("window must be >= 1")
         if window > self.step + 1:
             window = self.step + 1
-        dropp_pkts = sum(self.hist_dropp_buffer_full_pkts[-window:])
         return self.get_dropp_max_lat_pkts_bits(window) + self.get_dropp_buffer_full_pkts_bits(window)
     
     def get_arriv_TTI_throughput(self, window:int) -> float:

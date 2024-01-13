@@ -27,6 +27,7 @@ class Slice:
         scheduler: IntraSliceScheduler,
         TTI:float, # s
         rng: np.random.BitGenerator,
+        window_max: int,
     ) -> None:
         self.id = id
         self.type = config.type
@@ -35,7 +36,9 @@ class Slice:
         self.scheduler = scheduler
         self.TTI = TTI
         self.rng = rng
+        self.window_max = window_max
         self.step = 0
+        self.window = 1
         self.users: Dict[int, User] = dict()
         self.rbgs: List[RBG] = []
         self.hist_n_allocated_RBGs: List[RBG] =[]
@@ -43,6 +46,7 @@ class Slice:
 
     def reset(self) -> None:
         self.step = 0
+        self.window = 1
         self.clear_rbg_allocation()
         self.hist_n_allocated_RBGs: List[RBG] =[]
         self.hist_allocated_throughput:List[float] = []
@@ -65,6 +69,7 @@ class Slice:
             TTI=self.TTI,
             config=user_config,
             rng=self.rng,
+            window_max=self.window_max,
         )
         self.users[user_id].set_requirements(requirements=self.requirements)
 
@@ -84,6 +89,9 @@ class Slice:
         for u in self.users.values():
             u.transmit()
         self.step += 1
+        self.window += 1
+        if self.window > self.window_max:
+            self.window = self.window_max
         self.__hist_update_after_transmit()
     
     def allocate_rbg(self, rbg:RBG) -> None:
