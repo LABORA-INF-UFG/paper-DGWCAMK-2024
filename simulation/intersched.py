@@ -216,22 +216,41 @@ class OptimalHeuristic(InterSliceScheduler):
             # if user.step > 1 and user.requirements["long_term_thr"]*self.window - agg_thr > 0:
             #     print("UE {} step {} prev: {:.2f} vs long_term req: {:.2f} had {} RBGs".format(user.id, user.step, user.hist_long_term_thr[-1]/1e6, float(user.requirements["long_term_thr"]*self.window - agg_thr)/1e6, user.hist_n_allocated_RBGs[-1]))
         if "fifth_perc_thr" in user.requirements: 
-            min_thr = max(user.requirements["fifth_perc_thr"], min_thr) # Considering window <= 19
+            min_thr = max( 
+                user.requirements["fifth_perc_thr"], # Considering window <= 19
+                min_thr
+            ) 
             # fif_req = min(user.requirements["fifth_perc_thr"], user.get_min_thr(self.window-1)) if self.window > 1 else user.requirements["fifth_perc_thr"]
             # min_thr = max(fif_req,min_thr)
             # print("fifth_perc_thr req: {:.2f}".format(fif_req/1e6))
         if "pkt_loss" in user.requirements:
-            denominator = user.get_buff_pkts(user.step-self.window+1) + user.get_last_arriv_pkts() + user.get_arriv_pkts(self.window)
-            max_dropp = int(denominator * user.requirements["pkt_loss"] - user.get_dropp_pkts(self.window))
-            dropp_max_lat = user.get_dropp_pkts(user.get_max_lat()-1)
-            dropp_buff_full = max(user.get_buff_pkts_now() - user.get_buffer_pkt_capacity(), 0)
-            need_to_send = 0
-            while(max(dropp_max_lat-need_to_send, 0) + max(dropp_buff_full-need_to_send, 0) > max_dropp):
-                need_to_send += 1
+            delta = user.get_n_buff_pkts_waited_i_TTIs(user.get_max_lat()-1)
+            gamma = max(
+                0,
+                (user.get_last_arriv_pkts() + user.get_buff_pkts_now()) - user.get_buffer_pkt_capacity()
+            )
+            theta = user.get_last_arriv_pkts() + user.get_buff_pkts(user.step-self.window+1) + user.get_arriv_pkts(self.window)
+            dropp_lat_sum = user.buff.get_dropp_max_lat_pkts_bits(self.window-1)/user.get_pkt_size()
+            dropp_arr_sum = user.buff.get_dropp_buffer_full_pkts_bits(self.window)/user.get_pkt_size()
+            throughput = user.get_pkt_size() * max(
+                0,
+                dropp_lat_sum + dropp_arr_sum + max(gamma, delta) - user.requirements["pkt_loss"]*theta
+            )/user.TTI
             min_thr = max(
-                need_to_send*user.get_pkt_size()*user.TTI,
+                throughput,
                 min_thr
             )
+            # denominator = user.get_buff_pkts(user.step-self.window+1) + user.get_last_arriv_pkts() + user.get_arriv_pkts(self.window)
+            # max_dropp = int(denominator * user.requirements["pkt_loss"] - user.get_dropp_pkts(self.window))
+            # dropp_max_lat = user.get_dropp_pkts(user.get_max_lat()-1)
+            # dropp_buff_full = max(user.get_buff_pkts_now() - user.get_buffer_pkt_capacity(), 0)
+            # need_to_send = 0
+            # while(max(dropp_max_lat-need_to_send, 0) + max(dropp_buff_full-need_to_send, 0) > max_dropp):
+            #     need_to_send += 1
+            # min_thr = max(
+            #     need_to_send*user.get_pkt_size()*user.TTI,
+            #     min_thr
+            # )
             # print("pkt_loss req: {:.2f}".format(need_to_send*user.get_pkt_size()*user.TTI/1e6))
         return min_thr
 
