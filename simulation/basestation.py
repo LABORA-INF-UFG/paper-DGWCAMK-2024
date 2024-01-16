@@ -38,12 +38,14 @@ class BaseStation:
         self.window = 1
         self.hist_n_allocated_RBGs: List[int] = []
         self.scheduler_elapsed_time: List[float] = []
+        self.hist_agent_reward: List[float] = []
 
     def reset(self) -> None:
         self.step = 0
         self.window = 1
         self.hist_n_allocated_RBGs = []
         self.scheduler_elapsed_time = []
+        self.hist_agent_reward: List[float] = []
         for s in self.slices.values():
             s.reset()
         for u in self.users.values():
@@ -51,6 +53,7 @@ class BaseStation:
 
     def __hist_update_after_transmit(self) -> None:
         self.hist_n_allocated_RBGs.append(sum(s.hist_n_allocated_RBGs[-1] for s in self.slices.values()))
+        self.hist_agent_reward.append(self.calculate_reward())
 
     def add_slice(
         self,
@@ -119,6 +122,45 @@ class BaseStation:
         self.scheduler_elapsed_time.append(time.time() - start)
         for s in self.slices.values():
             s.schedule_rbgs()
+
+    def calculate_reward(self) -> float:
+        w_embb_thr = 0.2
+        w_embb_lat = 0.05
+        w_embb_loss = 0.05
+        w_urllc_thr = 0.1
+        w_urllc_lat = 0.25
+        w_urllc_loss = 0.25
+        w_be_long = 0.05
+        w_be_fifth = 0.05
+        reward = 0.0
+        for s in self.slices.values():
+            thr = s.get_served_thr()
+            lat = s.get_avg_buffer_latency()
+            loss = s.get_pkt_loss_rate(window=self.window)
+            long = s.get_long_term_thr(window=self.window)
+            fif = s.get_fifth_perc_thr(window=self.window)
+            if s.type == "embb":
+                thr_req = s.requirements["throughput"]
+                lat_req = s.requirements["latency"] * self.TTI
+                loss_req = s.requirements["pkt_loss"]
+                max_lat = s.user_config.buff_config.max_lat * self.TTI
+                reward += -w_embb_thr * (thr_req - thr)/thr_req if thr < thr_req else 0
+                reward += -w_embb_lat * (lat - lat_req)/(max_lat-lat_req) if lat > lat_req else 0
+                reward += -w_embb_loss * (loss - loss_req)/(1-loss_req) if loss > loss_req else 0
+            if s.type == "urllc":
+                thr_req = s.requirements["throughput"]
+                lat_req = s.requirements["latency"] * self.TTI
+                loss_req = s.requirements["pkt_loss"]
+                max_lat = s.user_config.buff_config.max_lat * self.TTI
+                reward += -w_urllc_thr * (thr_req - thr)/thr_req if thr < thr_req else 0
+                reward += -w_urllc_lat * (lat - lat_req)/(max_lat-lat_req) if lat > lat_req else 0
+                reward += -w_urllc_loss * (loss - loss_req)/(1-loss_req) if loss > loss_req else 0
+            if s.type == "be":
+                long_req = s.requirements["long_term_thr"]
+                fif_req = s.requirements["fifth_perc_thr"]
+                reward += -w_be_long * (long_req - long)/long_req if long < long_req else 0
+                reward += -w_be_fifth * (fif_req - fif)/fif_req if fif < fif_req else 0
+        return reward
 
     def __str__(self) -> str:
         return json.dumps(self.__dict__, cls=Encoder, indent=2)
