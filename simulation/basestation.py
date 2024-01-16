@@ -36,16 +36,20 @@ class BaseStation:
         self.user_id = 0
         self.slice_id = 0
         self.window = 1
+        self.cumulative_reward = 0.0
         self.hist_n_allocated_RBGs: List[int] = []
         self.scheduler_elapsed_time: List[float] = []
         self.hist_agent_reward: List[float] = []
+        self.hist_agent_reward_cumulative: List[float] = []
 
     def reset(self) -> None:
         self.step = 0
         self.window = 1
+        self.cumulative_reward = 0.0
         self.hist_n_allocated_RBGs = []
         self.scheduler_elapsed_time = []
         self.hist_agent_reward: List[float] = []
+        self.hist_agent_reward_cumulative: List[float] = []
         for s in self.slices.values():
             s.reset()
         for u in self.users.values():
@@ -53,7 +57,10 @@ class BaseStation:
 
     def __hist_update_after_transmit(self) -> None:
         self.hist_n_allocated_RBGs.append(sum(s.hist_n_allocated_RBGs[-1] for s in self.slices.values()))
-        self.hist_agent_reward.append(self.calculate_reward())
+        reward = self.calculate_reward()
+        self.cumulative_reward += reward
+        self.hist_agent_reward.append(reward)
+        self.hist_agent_reward_cumulative.append(self.cumulative_reward)
 
     def add_slice(
         self,

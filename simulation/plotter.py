@@ -433,7 +433,7 @@ class Plotter:
             "reward":{
                 "xlabel":"Time (ms)",
                 "ylabel":"Reward",
-                "title":"Reward function",
+                "title":"Reward",
                 "label":"{}",
                 "legend":{
                     "ncol":1,
@@ -443,6 +443,21 @@ class Plotter:
                 "savefig":{
                     "path":self.path + self.sim.experiment_name + "/",
                     "filename":"_reward.pdf"
+                }
+            },
+            "reward_cumulative":{
+                "xlabel":"Time (ms)",
+                "ylabel":"Reward",
+                "title":"Cumulative reward",
+                "label":"{}",
+                "legend":{
+                    "ncol":1,
+                    "bbox_to_anchor":None,
+                    "loc":(1.02, 0.4)
+                },
+                "savefig":{
+                    "path":self.path + self.sim.experiment_name + "/",
+                    "filename":"_reward_cumulative.pdf"
                 }
             },
             "bs_rbg_alloc":{
@@ -599,6 +614,8 @@ class Plotter:
             return np.array(basestation.hist_n_allocated_RBGs)/len(basestation.rbgs)*100
         elif plot == "reward":
             return basestation.hist_agent_reward
+        elif plot == "reward_cumulative":
+            return basestation.hist_agent_reward_cumulative
     
     def calculate_se_metric(self, plot: str, trial, users:List[int], multipliers:Dict[int, float]) -> np.array:
         ue_se:Dict[int, List[float]] = {}

@@ -76,6 +76,11 @@ if __name__ == "__main__":
         density=density,
         basestations=["heuristic", "sac", "roundrobin"],
     )
+    plotter.plot_basestation_metric_line(
+        plot="reward_cumulative",
+        density=density,
+        basestations=["heuristic", "sac", "roundrobin"],
+    )
     
     for s in ["embb", "urllc", "be"]:
         plotter.plot_slice_metric_line(
