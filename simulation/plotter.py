@@ -362,6 +362,40 @@ class Plotter:
                     "filename":"pkt_loss_worst_cdf.pdf"
                 }
             },
+            "sent_thr":{
+                "xlabel":"Time (ms)",
+                "ylabel":"Throughput (Mbps)",
+                "title_multi_slice":"Sent throughput",
+                "title_single_slice":"Sent throughput of {}",
+                "label_single_slice":"{}",
+                "label_multi_slice":"{}-{}",
+                "legend":{
+                    "ncol":1,
+                    "bbox_to_anchor":None,
+                    "loc":(1.02, 0.4)
+                },
+                "savefig":{
+                    "path":self.path + self.sim.experiment_name + "/",
+                    "filename":"sent_thr.pdf"
+                }
+            },
+            "sent_thr_worst":{
+                "xlabel":"Time (ms)",
+                "ylabel":"Throughput (Mbps)",
+                "title_multi_slice":"Worst sent throughput",
+                "title_single_slice":"Worst sent throughput of {}",
+                "label_single_slice":"{}",
+                "label_multi_slice":"{}-{}",
+                "legend":{
+                    "ncol":1,
+                    "bbox_to_anchor":None,
+                    "loc":(1.02, 0.4)
+                },
+                "savefig":{
+                    "path":self.path + self.sim.experiment_name + "/",
+                    "filename":"sent_thr_worst.pdf"
+                }
+            },
             "rbg_alloc":{
                 "xlabel":"Time (ms)",
                 "ylabel":"# of RBGs used",
@@ -471,6 +505,36 @@ class Plotter:
                     "filename":"se_trial{}.pdf"
                 }
             },
+            "disrespected_steps":{
+                "xlabel":"Requirement",
+                "ylabel":"# of disrespected requirements",
+                "title":"Disrespected requirements for {} experiment",
+                "label":"{}",
+                "legend":{
+                    "ncol":1,
+                    "bbox_to_anchor":None,
+                    "loc":(1.02, 0.2)
+                },
+                "savefig":{
+                    "path":self.path + self.sim.experiment_name + "/",
+                    "filename":"_disrespected_steps.pdf"
+                }
+            },
+            "arrived_thr":{
+                "xlabel":"Time (ms)",
+                "ylabel":"Throughput (Mbps)",
+                "title":"Average arrived throughput",
+                "label":"{}",
+                "legend":{
+                    "ncol":1,
+                    "bbox_to_anchor":None,
+                    "loc":(1.02, 0.2)
+                },
+                "savefig":{
+                    "path":self.path + "/",
+                    "filename":"_arrived_thr.pdf"
+                }
+            },
         }
         self.plots:List[str] = list(self.config.keys())
 
@@ -508,7 +572,11 @@ class Plotter:
             return slice.hist_n_allocated_RBGs
         elif plot == "rbg_alloc_norm":
             return np.array(slice.hist_n_allocated_RBGs)/len(basestation.rbgs) * 100
-
+        elif plot == "sent_thr":
+            return np.mean([u.hist_sent_pkt_bits for u in slice.users.values()], axis=0)/self.sim.TTI /1e6
+        elif plot == "sent_thr_worst":
+            return np.min([u.hist_sent_pkt_bits for u in slice.users.values()], axis=0)/self.sim.TTI /1e6
+        
     def calculate_basestation_metric(self, plot: str, basestation: BaseStation) -> np.array:
         if plot == "bs_rbg_alloc":
             return np.array(basestation.hist_n_allocated_RBGs)
@@ -795,26 +863,121 @@ class Plotter:
         plt.savefig(path,bbox_inches='tight')
         plt.close('all')
 
-    def plot_radar(self) -> None:
-        pass
+    def get_bar_position(self, plot:str, slice:str, labels: List[str]) -> int:
+        if slice == "be" and plot == "long_term_thr":
+            return labels.index("be long-term thr")
+        elif slice == "be" and plot == "fifth_perc_thr":
+            return labels.index("be fifth-perc thr")
+        elif slice == "embb" and plot == "serv_thr":
+            return labels.index("embb serv thr")
+        elif slice == "embb" and plot == "pkt_loss":
+            return labels.index("embb pkt loss")
+        elif slice == "embb" and plot == "avg_buff_lat":
+            return labels.index("embb avg buff lat")
+        elif slice == "urllc" and plot == "serv_thr":
+            return labels.index("urllc serv thr")
+        elif slice == "urllc" and plot == "pkt_loss":
+            return labels.index("urllc pkt loss")
+        elif slice == "urllc" and plot == "avg_buff_lat":
+            return labels.index("urllc avg buff lat")
 
-    def test(self) -> None:
+    def plot_disrespected_steps(self) -> None:
+        sns.set_style("ticks")
+        labels = [
+            'embb pkt loss', 'embb avg buff lat','embb serv thr', 
+            'be long-term thr', 'be fifth-perc thr',
+            'urllc serv thr', 'urllc pkt loss', 'urllc avg buff lat'
+        ]
         be_plots = [
-            "fifth_perc_thr",
-            "long_term_thr",
+            "fifth_perc_thr","long_term_thr",
         ]
         embb_urllc_plots=[
-            "avg_buff_lat",
-            "pkt_loss",
-            "serv_thr",
+            "avg_buff_lat", "pkt_loss", "serv_thr",
         ]
+        bs_values:Dict[str, Dict[str, List[int]]] = {}
         for bs_id, bs in self.sim.basestations.items():
+            bs_values[bs.name] = {}
             for slice_id, slice in bs.slices.items():
                 if slice.type == "be":
                     for plot in be_plots:
                         disr = self.get_slice_disrespected_steps(plot,slice)
-                        print("Disrespected steps for {}-{}-{}: {}".format(bs.name, slice.type, plot, sum(disr)))
+                        pos = self.get_bar_position(plot, slice.type, labels)
+                        bs_values[bs.name][labels[pos]] = sum(disr)
+                        #print("Disrespected steps for {}-{}-{}: {}".format(bs.name, slice.type, plot, sum(disr)))
                 elif slice.type in ["embb", "urllc"]:
                     for plot in embb_urllc_plots:
                         disr = self.get_slice_disrespected_steps(plot,slice)
-                        print("Disrespected steps for {}-{}-{}: {}".format(bs.name, slice.type, plot, sum(disr)))
+                        pos = self.get_bar_position(plot, slice.type, labels)
+                        bs_values[bs.name][labels[pos]] = sum(disr)
+                        #print("Disrespected steps for {}-{}-{}: {}".format(bs.name, slice.type, plot, sum(disr)))
+        plt.figure()
+        plot = "disrespected_steps"
+        to_remove = []
+        for l in labels:
+            if sum([bs_values[bs.name][l] for bs in self.sim.basestations.values()]) == 0:
+                for bs in self.sim.basestations.values():
+                    del bs_values[bs.name][l]
+                to_remove.append(l)
+        for l in to_remove:
+            labels.pop(labels.index(l))
+        for bs in self.sim.basestations.values():
+            if bs.name in bs_values and sum(bs_values[bs.name].values()) == 0:
+                del bs_values[bs.name]
+        bar_width = 0.8 / len(bs_values)  # Adjust as needed
+        bar_positions = {bs: [i - (bar_width / 2) * (len(bs_values) - 1) + j * bar_width for i in range(len(labels))] for j, bs in enumerate(bs_values.keys())}
+        # print(bs_values)
+        for bs_id, bs in self.sim.basestations.items():
+            if bs.name not in bs_values.keys():
+                continue
+            bar_container = plt.bar(
+                bar_positions[bs.name],
+                [bs_values[bs.name][l] for l in labels],
+                width=bar_width,
+                label=self.config[plot]["label"].format(bs.name),
+                color=self.colors[bs.name],
+            )
+            plt.bar_label(bar_container)
+        plt.title(self.config[plot]["title"].format(self.sim.experiment_name))
+        plt.xlabel(self.config[plot]["xlabel"])
+        plt.ylabel(self.config[plot]["ylabel"])
+        plt.xticks([i for i in range(len(labels))], labels,)
+        # plt.xticks([i for i in range(len(labels))], labels, rotation=60, ha="right")
+        # plt.xticks(rotation=60, ha="right")
+        plt.yscale("log")
+        plt.legend(
+            ncol=self.config[plot]["legend"]["ncol"],
+            bbox_to_anchor=self.config[plot]["legend"]["bbox_to_anchor"],
+            loc=self.config[plot]["legend"]["loc"]
+        )
+        path = self.config[plot]["savefig"]["path"]
+        path += self.config[plot]["savefig"]["filename"]
+        
+        plt.savefig(path, bbox_inches='tight')
+        sns.set_style("whitegrid")
+
+    def plot_arrived_thr_line(self, density: int):
+        plot = "arrived_thr"
+        plt.figure()
+        bs = list(self.sim.basestations.values())[0]
+        for slice_id, slice in bs.slices.items():
+            metric = np.average([u.hist_arriv_pkt_bits for u in slice.users.values()], axis=0)/self.sim.TTI /1e6
+            downsampled = [np.mean(metric[i:i+density]) for i in range(0, len(metric), density)]
+            x_ticks = np.arange(0, len(metric), density)
+            plt.plot(
+                x_ticks,
+                downsampled,
+                label=self.config[plot]["label"].format(slice.type),
+                color=self.colors[slice.type]
+            )
+        plt.xlabel(self.config[plot]["xlabel"])
+        plt.ylabel(self.config[plot]["ylabel"])
+        plt.title(self.config[plot]["title"])
+        plt.legend(
+            ncol=self.config[plot]["legend"]["ncol"],
+            bbox_to_anchor=self.config[plot]["legend"]["bbox_to_anchor"],
+            loc=self.config[plot]["legend"]["loc"]
+        )
+        path = self.config[plot]["savefig"]["path"]
+        path += self.config[plot]["savefig"]["filename"]
+        plt.savefig(path,bbox_inches='tight')
+        plt.close('all')

@@ -61,6 +61,7 @@ class User:
         self.hist_fifth_perc_thr:List[float] = []
         self.hist_long_term_thr:List[float] = []
         self.hist_pkt_loss:List[float] = []
+        self.hist_sent_pkt_bits:List[float] = []
 
     def reset(self) -> None:
         self.step = 0
@@ -77,6 +78,7 @@ class User:
         self.hist_fifth_perc_thr:List[float] = []
         self.hist_long_term_thr:List[float] = []
         self.hist_pkt_loss:List[float] = []
+        self.hist_sent_pkt_bits:List[float] = []
         self.buff.reset()
         self.flow.reset()
 
@@ -88,6 +90,7 @@ class User:
         self.hist_arriv_pkt_bits.append(self.buff.get_arriv_pkts_bits(window=1))
         self.hist_fifth_perc_thr.append(np.percentile(self.hist_allocated_throughput[-self.window:], 5))
         self.hist_long_term_thr.append(np.mean(self.hist_allocated_throughput[-self.window:]))
+        self.hist_sent_pkt_bits.append(self.buff.get_sent_pkts_bits(window=1))
         numerator = int(sum(self.hist_dropp_pkt_bits[-self.window:]))
         denominator = int(sum(self.hist_arriv_pkt_bits[-self.window:]) + self.hist_buff_pkt_bits[self.step-self.window+1])
         if denominator == 0:

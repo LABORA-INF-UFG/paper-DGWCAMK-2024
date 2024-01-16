@@ -40,8 +40,12 @@ if __name__ == "__main__":
     sim_data_file = open("experiment_data/{}_experiment_data.pickle".format(sys.argv[1]), "rb")
     sim = pickle.load(sim_data_file)
     sim_data_file.close()
+    # import numpy as np
+    # for bs in sim.basestations.values():
+    #     print("avg:", bs.name, np.average(bs.hist_n_allocated_RBGs)/len(bs.rbgs)*100)
+    #     print("max:", bs.name, np.max(bs.hist_n_allocated_RBGs)/len(bs.rbgs)*100)
     plotter = Plotter(sim)
-    plotter.test()
+    plotter.plot_disrespected_steps()
     plotter.plot_se_line(
         plot="slice_se",
         multipliers=SE_multipliers,
@@ -52,6 +56,9 @@ if __name__ == "__main__":
         plot="slice_se_worst",
         multipliers=SE_multipliers,
         trial=trial,
+        density=density,
+    )
+    plotter.plot_arrived_thr_line(
         density=density,
     )
     plotter.plot_basestation_metric_line(
@@ -75,6 +82,20 @@ if __name__ == "__main__":
         )
         plotter.plot_slice_metric_line(
             plot="rbg_alloc_norm",
+            density=density,
+            slices=[s],
+            basestations=["heuristic", "sac", "roundrobin"],
+            plot_requirement=False
+        )
+        plotter.plot_slice_metric_line(
+            plot="sent_thr",
+            density=density,
+            slices=[s],
+            basestations=["heuristic", "sac", "roundrobin"],
+            plot_requirement=False
+        )
+        plotter.plot_slice_metric_line(
+            plot="sent_thr_worst",
             density=density,
             slices=[s],
             basestations=["heuristic", "sac", "roundrobin"],
