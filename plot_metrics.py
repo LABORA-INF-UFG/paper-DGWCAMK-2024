@@ -42,8 +42,11 @@ if __name__ == "__main__":
     sim_data_file.close()
     import numpy as np
     for bs in sim.basestations.values():
+        print(bs.id)
         print("avg:", bs.name, np.average(bs.hist_n_allocated_RBGs)/len(bs.rbgs)*100)
         print("max:", bs.name, np.max(bs.hist_n_allocated_RBGs)/len(bs.rbgs)*100)
+        # for s in bs.slices.values():
+        #     print("{} - {}".format(s.id, s.type))
     plotter = Plotter(sim)
     plotter.plot_disrespected_steps()
     plotter.plot_se_line(
@@ -74,12 +77,12 @@ if __name__ == "__main__":
     plotter.plot_basestation_metric_line(
         plot="reward",
         density=density,
-        basestations=["heuristic", "sac", "roundrobin"],
+        basestations=["OptAlgo", "Nahum\'s", "RR"],
     )
     plotter.plot_basestation_metric_line(
         plot="reward_cumulative",
         density=density,
-        basestations=["heuristic", "sac", "roundrobin"],
+        basestations=["OptAlgo", "Nahum\'s", "RR"],
     )
     
     for s in ["embb", "urllc", "be"]:
