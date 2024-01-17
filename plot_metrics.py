@@ -40,10 +40,10 @@ if __name__ == "__main__":
     sim_data_file = open("experiment_data/{}_experiment_data.pickle".format(sys.argv[1]), "rb")
     sim = pickle.load(sim_data_file)
     sim_data_file.close()
-    # import numpy as np
-    # for bs in sim.basestations.values():
-    #     print("avg:", bs.name, np.average(bs.hist_n_allocated_RBGs)/len(bs.rbgs)*100)
-    #     print("max:", bs.name, np.max(bs.hist_n_allocated_RBGs)/len(bs.rbgs)*100)
+    import numpy as np
+    for bs in sim.basestations.values():
+        print("avg:", bs.name, np.average(bs.hist_n_allocated_RBGs)/len(bs.rbgs)*100)
+        print("max:", bs.name, np.max(bs.hist_n_allocated_RBGs)/len(bs.rbgs)*100)
     plotter = Plotter(sim)
     plotter.plot_disrespected_steps()
     plotter.plot_se_line(
@@ -64,12 +64,12 @@ if __name__ == "__main__":
     plotter.plot_basestation_metric_line(
         plot="bs_rbg_alloc",
         density=density,
-        basestations=["heuristic", "sac", "roundrobin"],
+        basestations=["OptAlgo", "Nahum\'s", "RR"],
     )
     plotter.plot_basestation_metric_line(
         plot="bs_rbg_alloc_norm",
         density=density,
-        basestations=["heuristic", "sac", "roundrobin"],
+        basestations=["OptAlgo", "Nahum\'s", "RR"],
     )
     
     for s in ["embb", "urllc", "be"]:
@@ -77,28 +77,28 @@ if __name__ == "__main__":
             plot="rbg_alloc",
             density=density,
             slices=[s],
-            basestations=["heuristic", "sac", "roundrobin"],
+            basestations=["OptAlgo", "Nahum\'s", "RR"],
             plot_requirement=False
         )
         plotter.plot_slice_metric_line(
             plot="rbg_alloc_norm",
             density=density,
             slices=[s],
-            basestations=["heuristic", "sac", "roundrobin"],
+            basestations=["OptAlgo", "Nahum\'s", "RR"],
             plot_requirement=False
         )
         plotter.plot_slice_metric_line(
             plot="sent_thr",
             density=density,
             slices=[s],
-            basestations=["heuristic", "sac", "roundrobin"],
+            basestations=["OptAlgo", "Nahum\'s", "RR"],
             plot_requirement=False
         )
         plotter.plot_slice_metric_line(
             plot="sent_thr_worst",
             density=density,
             slices=[s],
-            basestations=["heuristic", "sac", "roundrobin"],
+            basestations=["OptAlgo", "Nahum\'s", "RR"],
             plot_requirement=False
         )
 
@@ -113,20 +113,42 @@ if __name__ == "__main__":
         "serv_thr", "serv_thr_worst",
     ]
 
+    plotter.plot_slice_metric_cdf(
+        plot="rbg_alloc_norm_cdf",
+        density=density,
+        slices=["embb"],
+        basestations=["OptAlgo", "Nahum\'s", "RR"],
+        plot_requirement=False
+    )
+    plotter.plot_slice_metric_cdf(
+        plot="rbg_alloc_norm_cdf",
+        density=density,
+        slices=["urllc"],
+        basestations=["OptAlgo", "Nahum\'s", "RR"],
+        plot_requirement=False
+    )
+    plotter.plot_slice_metric_cdf(
+        plot="rbg_alloc_norm_cdf",
+        density=density,
+        slices=["be"],
+        basestations=["OptAlgo", "Nahum\'s", "RR"],
+        plot_requirement=False
+    )
+
     for plot in be_plots:
         for s in ["be"]:
             plotter.plot_slice_metric_line(
                 plot=plot,
                 density=density,
                 slices=[s],
-                basestations=["heuristic", "sac", "roundrobin"],
+                basestations=["OptAlgo", "Nahum\'s", "RR"],
                 plot_requirement=True
             )
             plotter.plot_slice_metric_cdf(
                 plot=plot+"_cdf",
                 density=density,
                 slices=[s],
-                basestations=["heuristic", "sac", "roundrobin"],
+                basestations=["OptAlgo", "Nahum\'s", "RR"],
                 plot_requirement=True
             )
     
@@ -136,14 +158,14 @@ if __name__ == "__main__":
                 plot=plot,
                 density=density,
                 slices=[s],
-                basestations=["heuristic", "sac", "roundrobin"],
+                basestations=["OptAlgo", "Nahum\'s", "RR"],
                 plot_requirement=True
             )
             plotter.plot_slice_metric_cdf(
                 plot=plot+"_cdf",
                 density=density,
                 slices=[s],
-                basestations=["heuristic", "sac", "roundrobin"],
+                basestations=["OptAlgo", "Nahum\'s", "RR"],
                 plot_requirement=True
             )
 

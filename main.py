@@ -149,7 +149,7 @@ if __name__ == "__main__":
         rbs_per_rbg=sim.rbs_per_rbg,
         bandwidth=100e6, # 100MHz
         seed = 1, # For generating random numbers
-        name = "heuristic",
+        name = "OptAlgo",
         window_max=10,
     )
 
@@ -158,7 +158,7 @@ if __name__ == "__main__":
         rbs_per_rbg=sim.rbs_per_rbg,
         bandwidth=100e6, # 100MHz
         seed = 1, # For generating random numbers
-        name = "roundrobin",
+        name = "RR",
         window_max=10,
     )
 
@@ -170,7 +170,7 @@ if __name__ == "__main__":
         rbs_per_rbg=sim.rbs_per_rbg,
         bandwidth=100e6, # 100MHz
         seed = 1, # For generating random numbers
-        name = "sac",
+        name = "Nahum\'s",
         window_max=10,
     )
 

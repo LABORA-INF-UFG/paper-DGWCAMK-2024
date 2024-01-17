@@ -279,6 +279,7 @@ class SAC(InterSliceScheduler):
         self.agent = stable_baselines3.SAC.load(best_model_zip_path, None, verbose=0)
         self.action_space_options = None
         self.window = 1
+        self.action_set = set()
         
     def create_combinations(self, n_rbgs: int, n_slices: int) -> None:
         combinations = []
@@ -339,7 +340,9 @@ class SAC(InterSliceScheduler):
         # action_values = self.action_space_options[action_idx]
         #allocation = dict(zip(slices.keys(), action_values))
         allocation = dict(zip(slices.keys(), action_approx))
-        #print(allocation)
+        self.action_set.add(tuple(np.array(action_approx)/138 * 100))
+        #print(self.action_set)
+        # print(allocation)
         rbg_index = 0
         for s in slices.values():
             s.clear_rbg_allocation()

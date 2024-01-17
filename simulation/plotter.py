@@ -415,9 +415,9 @@ class Plotter:
             },
             "rbg_alloc_norm":{
                 "xlabel":"Time (ms)",
-                "ylabel":"RBGs used (%)",
-                "title_multi_slice":"RBG allocation",
-                "title_single_slice":"RBG allocation of {}",
+                "ylabel":"Radio resource usage (%)",
+                "title_multi_slice":"Radio resource allocation",
+                "title_single_slice":"Radio resource allocation of {}",
                 "label_single_slice":"{}",
                 "label_multi_slice":"{}-{}",
                 "legend":{
@@ -428,6 +428,24 @@ class Plotter:
                 "savefig":{
                     "path":self.path + self.sim.experiment_name + "/",
                     "filename":"rbg_alloc_norm.pdf"
+                }
+            },
+            
+            "rbg_alloc_norm_cdf":{
+                "xlabel":"Radio resource usage (%)",
+                "ylabel":"CDF",
+                "title_multi_slice":"CDF of radio resource allocation",
+                "title_single_slice":"CDF of radio resource allocation for {}",
+                "label_single_slice":"{}",
+                "label_multi_slice":"{}-{}",
+                "legend":{
+                    "ncol":1,
+                    "bbox_to_anchor":None,
+                    "loc":(1.02, 0.4)
+                },
+                "savefig":{
+                    "path":self.path + self.sim.experiment_name + "/",
+                    "filename":"rbg_alloc_norm_cdf.pdf"
                 }
             },
             "bs_rbg_alloc":{
@@ -447,8 +465,8 @@ class Plotter:
             },
             "bs_rbg_alloc_norm":{
                 "xlabel":"Time (ms)",
-                "ylabel":"RBGs used (%)",
-                "title":"RBG allocation",
+                "ylabel":"Radio resource usage (%)",
+                "title":"Radio resource allocation",
                 "label":"{}",
                 "legend":{
                     "ncol":1,
@@ -507,7 +525,7 @@ class Plotter:
             },
             "disrespected_steps":{
                 "xlabel":"Requirement",
-                "ylabel":"# of disrespected requirements",
+                "ylabel":"Times the requirement was disrespected",
                 "title":"Disrespected requirements for {} experiment",
                 "label":"{}",
                 "legend":{
@@ -539,9 +557,9 @@ class Plotter:
         self.plots:List[str] = list(self.config.keys())
 
         self.colors:Dict[str, str] = {
-            "heuristic": "blue",
-            "roundrobin": "orange",
-            "sac": "green",
+            "OptAlgo": "blue",
+            "RR": "orange",
+            "Nahum\'s": "green",
             "embb": "olive",
             "urllc": "pink",
             "be": "brown",
