@@ -149,9 +149,9 @@ class Plotter:
                 "label_single_slice":"{}",
                 "label_multi_slice":"{}-{}",
                 "legend":{
-                    "ncol":1,
+                    "ncol":2,
                     "bbox_to_anchor":None,
-                    "loc":(1.02, 0.4)
+                    "loc":"best" #(1.02, 0.4)
                 },
                 "savefig":{
                     "path":self.path + self.sim.experiment_name + "/",
@@ -217,9 +217,9 @@ class Plotter:
                 "label_single_slice":"{}",
                 "label_multi_slice":"{}-{}",
                 "legend":{
-                    "ncol":1,
+                    "ncol":2, #1,
                     "bbox_to_anchor":None,
-                    "loc":(1.02, 0.4)
+                    "loc":"best" #(1.02, 0.4)
                 },
                 "savefig":{
                     "path":self.path + self.sim.experiment_name + "/",
@@ -251,9 +251,9 @@ class Plotter:
                 "label_single_slice":"{}",
                 "label_multi_slice":"{}-{}",
                 "legend":{
-                    "ncol":1,
+                    "ncol":2, #1,
                     "bbox_to_anchor":None,
-                    "loc":(1.02, 0.4)
+                    "loc":"best"#(1.02, 0.4)
                 },
                 "savefig":{
                     "path":self.path + self.sim.experiment_name + "/",
@@ -285,9 +285,9 @@ class Plotter:
                 "label_single_slice":"{}",
                 "label_multi_slice":"{}-{}",
                 "legend":{
-                    "ncol":1,
+                    "ncol":2, #1,
                     "bbox_to_anchor":None,
-                    "loc":(1.02, 0.4)
+                    "loc":"best"#(1.02, 0.4)
                 },
                 "savefig":{
                     "path":self.path + self.sim.experiment_name + "/",
@@ -421,9 +421,9 @@ class Plotter:
                 "label_single_slice":"{}",
                 "label_multi_slice":"{}-{}",
                 "legend":{
-                    "ncol":1,
+                    "ncol":3, #1,
                     "bbox_to_anchor":None,
-                    "loc":(1.02, 0.4)
+                    "loc": "best" #(1.02, 0.4)
                 },
                 "savefig":{
                     "path":self.path + self.sim.experiment_name + "/",
@@ -471,7 +471,7 @@ class Plotter:
                 "legend":{
                     "ncol":1,
                     "bbox_to_anchor":None,
-                    "loc":(1.02, 0.4)
+                    "loc":"center right"#(1.02, 0.4)
                 },
                 "savefig":{
                     "path":self.path + self.sim.experiment_name + "/",
@@ -516,7 +516,7 @@ class Plotter:
                 "legend":{
                     "ncol":1,
                     "bbox_to_anchor":None,
-                    "loc":(1.02, 0.4)
+                    "loc": "upper right"#(1.02, 0.4)
                 },
                 "savefig":{
                     "path":self.path,
@@ -531,7 +531,7 @@ class Plotter:
                 "legend":{
                     "ncol":1,
                     "bbox_to_anchor":None,
-                    "loc":(1.02, 0.4)
+                    "loc": "upper right"#(1.02, 0.4)
                 },
                 "savefig":{
                     "path":self.path,
@@ -724,6 +724,7 @@ class Plotter:
         basestations: List[str] = None,
         slices: List[str] = None,
         plot_requirement: bool = False,
+        plot_title:bool = False,
     ) -> None:
         plt.figure()
         for bs_id, bs in self.sim.basestations.items():
@@ -758,9 +759,9 @@ class Plotter:
             )
         plt.xlabel(self.config[plot]["xlabel"])
         plt.ylabel(self.config[plot]["ylabel"])
-        if slices is not None and len(slices) == 1:
+        if slices is not None and len(slices) == 1 and plot_title:
             plt.title(self.config[plot]["title_single_slice"].format(slices[0]))
-        else:
+        elif plot_title:
             plt.title(self.config[plot]["title_multi_slice"])
         plt.legend(
             ncol=self.config[plot]["legend"]["ncol"],
@@ -781,6 +782,7 @@ class Plotter:
         plot:str,
         density:int = 1,
         basestations: List[str] = None,
+        plot_title:bool = False,
     ) -> None:
         plt.figure()
         for bs_id, bs in self.sim.basestations.items():
@@ -797,7 +799,8 @@ class Plotter:
             )
         plt.xlabel(self.config[plot]["xlabel"])
         plt.ylabel(self.config[plot]["ylabel"])
-        plt.title(self.config[plot]["title"])
+        if plot_title:
+            plt.title(self.config[plot]["title"])
         plt.legend(
             ncol=self.config[plot]["legend"]["ncol"],
             bbox_to_anchor=self.config[plot]["legend"]["bbox_to_anchor"],
@@ -814,6 +817,7 @@ class Plotter:
         multipliers: Dict[int, float],
         trial:int,
         density:int = 1,
+        plot_title:bool = False,
     ) -> None:
         plt.figure()
         if plot in ["slice_se", "slice_se_worst"]:
@@ -840,7 +844,8 @@ class Plotter:
         
         plt.xlabel(self.config[plot]["xlabel"])
         plt.ylabel(self.config[plot]["ylabel"])
-        plt.title(self.config[plot]["title"])
+        if plot_title:
+            plt.title(self.config[plot]["title"])
         plt.legend(
             ncol=self.config[plot]["legend"]["ncol"],
             bbox_to_anchor=self.config[plot]["legend"]["bbox_to_anchor"],
@@ -861,6 +866,7 @@ class Plotter:
         basestations: List[str] = None,
         slices: List[str] = None,
         plot_requirement: bool = False,
+        plot_title:bool = False,
     ) -> None:
         plt.figure()
         for bs_id, bs in self.sim.basestations.items():
@@ -897,9 +903,9 @@ class Plotter:
             )
         plt.xlabel(self.config[plot]["xlabel"])
         plt.ylabel(self.config[plot]["ylabel"])
-        if slices is not None and len(slices) == 1:
+        if slices is not None and len(slices) == 1 and plot_title:
             plt.title(self.config[plot]["title_single_slice"].format(slices[0]))
-        else:
+        elif plot_title:
             plt.title(self.config[plot]["title_multi_slice"])
         plt.legend(
             ncol=self.config[plot]["legend"]["ncol"],
