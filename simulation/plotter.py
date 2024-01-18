@@ -561,7 +561,7 @@ class Plotter:
                 "legend":{
                     "ncol":1,
                     "bbox_to_anchor":None,
-                    "loc":(1.02, 0.2)
+                    "loc":"upper left" #(1.02, 0.2)
                 },
                 "savefig":{
                     "path":self.path + self.sim.experiment_name + "/",
@@ -654,7 +654,7 @@ class Plotter:
         elif plot == "serv_thr":
             return np.array(user.hist_allocated_throughput)/1e6
         elif plot == "avg_buff_lat":
-            return np.array(user.hist_avg_buff_lat)*user.TTI*1e3
+            return np.array(user.hist_avg_buff_lat)*1e3
         elif plot == "pkt_loss":
             return np.array(user.hist_pkt_loss)*100
 
@@ -933,7 +933,7 @@ class Plotter:
         elif slice == "urllc" and plot == "avg_buff_lat":
             return labels.index("urllc avg buff lat")
 
-    def plot_disrespected_steps(self) -> None:
+    def plot_disrespected_steps(self, plot_title:bool = False) -> None:
         sns.set_style("ticks")
         labels = [
             'embb pkt loss', 'embb avg buff lat','embb serv thr', 
@@ -961,6 +961,8 @@ class Plotter:
                         disr = self.get_slice_disrespected_steps(plot,slice)
                         pos = self.get_bar_position(plot, slice.type, labels)
                         bs_values[bs.name][labels[pos]] = sum(disr)
+                        # if plot == "avg_buff_lat":
+                        #     print(bs.name, disr)
                         #print("Disrespected steps for {}-{}-{}: {}".format(bs.name, slice.type, plot, sum(disr)))
         plt.figure()
         plot = "disrespected_steps"
@@ -968,14 +970,16 @@ class Plotter:
         for l in labels:
             if sum([bs_values[bs.name][l] for bs in self.sim.basestations.values()]) == 0:
                 for bs in self.sim.basestations.values():
+                    # print(bs.name, l, bs_values[bs.name][l])
                     del bs_values[bs.name][l]
                 to_remove.append(l)
+        # print(to_remove)
         for l in to_remove:
             labels.pop(labels.index(l))
         for bs in self.sim.basestations.values():
             if bs.name in bs_values and sum(bs_values[bs.name].values()) == 0:
                 del bs_values[bs.name]
-        bar_width = 0.8 / len(bs_values)  # Adjust as needed
+        bar_width = 0.9 / len(bs_values)  # Adjust as needed
         bar_positions = {bs: [i - (bar_width / 2) * (len(bs_values) - 1) + j * bar_width for i in range(len(labels))] for j, bs in enumerate(bs_values.keys())}
         # print(bs_values)
         for bs_id, bs in self.sim.basestations.items():
@@ -989,10 +993,20 @@ class Plotter:
                 color=self.colors[bs.name],
             )
             plt.bar_label(bar_container)
-        plt.title(self.config[plot]["title"].format(self.sim.experiment_name))
+        if plot_title:
+            plt.title(self.config[plot]["title"].format(self.sim.experiment_name))
         plt.xlabel(self.config[plot]["xlabel"])
         plt.ylabel(self.config[plot]["ylabel"])
-        plt.xticks([i for i in range(len(labels))], labels,)
+        if self.sim.experiment_name == "minimum":
+            for l in labels:
+                two_line_lable = l.split(" ")
+                two_line_lable[0] += "\n"
+                if l in ["be long-term thr", "be fifth-perc thr"]:
+                    two_line_lable[1] += "\n"
+                labels[labels.index(l)] = " ".join(two_line_lable)
+            plt.xticks([i for i in range(len(labels))], labels)
+        else:
+            plt.xticks([i for i in range(len(labels))], labels)
         # plt.xticks([i for i in range(len(labels))], labels, rotation=60, ha="right")
         # plt.xticks(rotation=60, ha="right")
         plt.yscale("log")
