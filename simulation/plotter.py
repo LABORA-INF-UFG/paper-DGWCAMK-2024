@@ -933,7 +933,7 @@ class Plotter:
         elif slice == "urllc" and plot == "avg_buff_lat":
             return labels.index("urllc avg buff lat")
 
-    def plot_disrespected_steps(self, plot_title:bool = False) -> None:
+    def plot_disrespected_steps(self, plot_title:bool = False, log_scale:bool = False) -> None:
         sns.set_style("ticks")
         labels = [
             'embb pkt loss', 'embb avg buff lat','embb serv thr', 
@@ -1009,7 +1009,8 @@ class Plotter:
             plt.xticks([i for i in range(len(labels))], labels)
         # plt.xticks([i for i in range(len(labels))], labels, rotation=60, ha="right")
         # plt.xticks(rotation=60, ha="right")
-        plt.yscale("log")
+        if log_scale:
+            plt.yscale("log")
         plt.legend(
             ncol=self.config[plot]["legend"]["ncol"],
             bbox_to_anchor=self.config[plot]["legend"]["bbox_to_anchor"],
