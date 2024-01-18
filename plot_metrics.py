@@ -47,6 +47,9 @@ if __name__ == "__main__":
         print("max:", np.max(bs.hist_n_allocated_RBGs)/len(bs.rbgs)*100)
         for s in bs.slices.values():
             print("No resource for {} in {}% of the steps".format(s.type, sum([1 for x in s.hist_n_allocated_RBGs if x == 0])/2000 * 100))
+        if bs.name == "Nahum\'s":
+            print("Nahum\s action set =", bs.action_set)
+            print(len(bs.action_set), "actions")
     
     plotter = Plotter(sim)
     plotter.plot_disrespected_steps()

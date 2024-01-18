@@ -358,6 +358,7 @@ if __name__ == "__main__":
     #     # print_slice_worst_metrics(bs=sim.basestations[bs_id], window=10) # 10ms window
 
     # Saving simulation data
+    sim.basestations[sac_bs].action_set = sim.basestations[sac_bs].scheduler.action_set
     sim.basestations[sac_bs].scheduler = None
     import pickle, os
     os.makedirs("./experiment_data/", exist_ok=True)
