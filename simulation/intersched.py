@@ -341,7 +341,8 @@ class SAC(InterSliceScheduler):
         #allocation = dict(zip(slices.keys(), action_values))
         allocation = dict(zip(slices.keys(), action_approx))
         self.action_set.add(tuple(np.array(action_approx)/138 * 100))
-        #print(self.action_set)
+        # print(self.action_set)
+        # print("0: {}, 1: {}, 2: {}".format(slices[0].type, slices[1].type, slices[2].type))
         # print(allocation)
         rbg_index = 0
         for s in slices.values():

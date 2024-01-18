@@ -42,11 +42,12 @@ if __name__ == "__main__":
     sim_data_file.close()
     import numpy as np
     for bs in sim.basestations.values():
-        print(bs.id)
-        print("avg:", bs.name, np.average(bs.hist_n_allocated_RBGs)/len(bs.rbgs)*100)
-        print("max:", bs.name, np.max(bs.hist_n_allocated_RBGs)/len(bs.rbgs)*100)
-        # for s in bs.slices.values():
-        #     print("{} - {}".format(s.id, s.type))
+        print(bs.name, "RBG allocation stats:")
+        print("avg:", np.average(bs.hist_n_allocated_RBGs)/len(bs.rbgs)*100)
+        print("max:", np.max(bs.hist_n_allocated_RBGs)/len(bs.rbgs)*100)
+        for s in bs.slices.values():
+            print("No resource for {} in {}% of the steps".format(s.type, sum([1 for x in s.hist_n_allocated_RBGs if x == 0])/2000 * 100))
+    
     plotter = Plotter(sim)
     plotter.plot_disrespected_steps()
     plotter.plot_se_line(
