@@ -221,7 +221,7 @@ if __name__ == "__main__":
     
     # Loading the spectral efficiency for each user
     SEs:Dict[int, List[float]] = dict()
-    SE_trial = 46 # 1, ..., 50, use 46 for the standard experiment
+    SE_trial = 46 # 1, ..., 50
     SE_sub_carrier = 2 # 1, 2
     SE_file_base_string = "se/trial{}_f{}_ue{}.npy"
 
