@@ -23,7 +23,7 @@ python train_agent.py
 ## Experiments
 There are three implemented experiments:
 - **standard**: SAO uses minimal resources while Nahum's agent and RR use 100%;
-- **minimum**: SAO, Nahum's agent and RR use minimal resources as calculated by SAO;
+- **minimum**: SAO, Nahum's agent and RR use limited resources as calculated by SAO;
 - **full**: SAO, Nahum's agent and RR use 100% of the resources. SAO uses 100% by allocating all resources at the same proportion of the minimal needed for each slice. As this behaviour actually do not have interesting results, it is not used in the paper.
 
 To run the experiment, simply execute:
