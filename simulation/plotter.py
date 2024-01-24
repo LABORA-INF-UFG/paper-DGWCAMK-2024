@@ -20,7 +20,7 @@ class Plotter:
 
         sns.set()
         sns.set_style("whitegrid")
-        self.fontsize = 14
+        self.fontsize = 18
 
         self.config:Dict[str, dict] = {
             "fifth_perc_thr":{
@@ -743,6 +743,8 @@ class Plotter:
                 metric = self.calculate_slice_metric(plot, bs, slice)
                 downsampled = [np.mean(metric[i:i+density]) for i in range(0, len(metric), density)]
                 x_ticks = np.arange(0, len(metric), density)
+                # downsampled = [np.mean(metric[i:i+density]) for i in range(0, len(metric))]
+                # x_ticks = np.arange(0, len(metric))
                 if slices is not None and len(slices) == 1:
                     plt.plot(
                         x_ticks,
@@ -773,10 +775,12 @@ class Plotter:
         plt.legend(
             ncol=self.config[plot]["legend"]["ncol"],
             bbox_to_anchor=self.config[plot]["legend"]["bbox_to_anchor"],
-            loc=self.config[plot]["legend"]["loc"]
+            loc=self.config[plot]["legend"]["loc"],
+            fontsize=self.fontsize
         )
         # if slices is not None and slices[0] == "URLLC" and plot in ["pkt_loss", "pkt_loss_worst"]:
         #     plt.ylim(0, 0.002)
+        plt.xlim(0, 2000-density)
         path = self.config[plot]["savefig"]["path"]
         if slices is not None:
             path += "_".join(slices) + "_"
@@ -811,8 +815,10 @@ class Plotter:
         plt.legend(
             ncol=self.config[plot]["legend"]["ncol"],
             bbox_to_anchor=self.config[plot]["legend"]["bbox_to_anchor"],
-            loc=self.config[plot]["legend"]["loc"]
+            loc=self.config[plot]["legend"]["loc"],
+            fontsize=self.fontsize
         )
+        plt.xlim(0, 2000-density)
         path = self.config[plot]["savefig"]["path"]
         path += self.config[plot]["savefig"]["filename"]
         plt.savefig(path,bbox_inches='tight')
@@ -856,8 +862,10 @@ class Plotter:
         plt.legend(
             ncol=self.config[plot]["legend"]["ncol"],
             bbox_to_anchor=self.config[plot]["legend"]["bbox_to_anchor"],
-            loc=self.config[plot]["legend"]["loc"]
+            loc=self.config[plot]["legend"]["loc"],
+            fontsize=self.fontsize
         )
+        plt.xlim(0, 2000-density)
         path = self.config[plot]["savefig"]["path"]
         path += self.config[plot]["savefig"]["filename"]
         if plot in ["se_trial"]:
@@ -917,7 +925,8 @@ class Plotter:
         plt.legend(
             ncol=self.config[plot]["legend"]["ncol"],
             bbox_to_anchor=self.config[plot]["legend"]["bbox_to_anchor"],
-            loc=self.config[plot]["legend"]["loc"]
+            loc=self.config[plot]["legend"]["loc"],
+            fontsize=self.fontsize
         )
         # if slices is not None and slices[0] == "URLLC" and plot in ["pkt_loss", "pkt_loss_worst"]:
         #     plt.ylim(0, 0.002)
@@ -1029,7 +1038,8 @@ class Plotter:
         plt.legend(
             ncol=self.config[plot]["legend"]["ncol"],
             bbox_to_anchor=self.config[plot]["legend"]["bbox_to_anchor"],
-            loc=self.config[plot]["legend"]["loc"]
+            loc=self.config[plot]["legend"]["loc"],
+            fontsize=self.fontsize
         )
         path = self.config[plot]["savefig"]["path"]
         path += self.config[plot]["savefig"]["filename"]
@@ -1057,7 +1067,8 @@ class Plotter:
         plt.legend(
             ncol=self.config[plot]["legend"]["ncol"],
             bbox_to_anchor=self.config[plot]["legend"]["bbox_to_anchor"],
-            loc=self.config[plot]["legend"]["loc"]
+            loc=self.config[plot]["legend"]["loc"],
+            fontsize=self.fontsize
         )
         path = self.config[plot]["savefig"]["path"]
         path += self.config[plot]["savefig"]["filename"]
