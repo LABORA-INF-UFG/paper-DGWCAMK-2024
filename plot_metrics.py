@@ -73,22 +73,22 @@ if __name__ == "__main__":
     plotter.plot_basestation_metric_line(
         plot="bs_rbg_alloc",
         density=density,
-        basestations=["OptAlgo", "Nahum\'s", "RR"],
+        basestations=["SOA", "Nahum\'s", "RR"],
     )
     plotter.plot_basestation_metric_line(
         plot="bs_rbg_alloc_norm",
         density=density,
-        basestations=["OptAlgo", "Nahum\'s", "RR"],
+        basestations=["SOA", "Nahum\'s", "RR"],
     )
     plotter.plot_basestation_metric_line(
         plot="reward",
         density=density,
-        basestations=["OptAlgo", "Nahum\'s", "RR"],
+        basestations=["SOA", "Nahum\'s", "RR"],
     )
     plotter.plot_basestation_metric_line(
         plot="reward_cumulative",
         density=density,
-        basestations=["OptAlgo", "Nahum\'s", "RR"],
+        basestations=["SOA", "Nahum\'s", "RR"],
     )
     
     for s in ["embb", "urllc", "be"]:
@@ -96,28 +96,28 @@ if __name__ == "__main__":
             plot="rbg_alloc",
             density=density,
             slices=[s],
-            basestations=["OptAlgo", "Nahum\'s", "RR"],
+            basestations=["SOA", "Nahum\'s", "RR"],
             plot_requirement=False
         )
         plotter.plot_slice_metric_line(
             plot="rbg_alloc_norm",
             density=density,
             slices=[s],
-            basestations=["OptAlgo", "Nahum\'s", "RR"],
+            basestations=["SOA", "Nahum\'s", "RR"],
             plot_requirement=False
         )
         plotter.plot_slice_metric_line(
             plot="sent_thr",
             density=density,
             slices=[s],
-            basestations=["OptAlgo", "Nahum\'s", "RR"],
+            basestations=["SOA", "Nahum\'s", "RR"],
             plot_requirement=False
         )
         plotter.plot_slice_metric_line(
             plot="sent_thr_worst",
             density=density,
             slices=[s],
-            basestations=["OptAlgo", "Nahum\'s", "RR"],
+            basestations=["SOA", "Nahum\'s", "RR"],
             plot_requirement=False
         )
 
@@ -136,21 +136,21 @@ if __name__ == "__main__":
         plot="rbg_alloc_norm_cdf",
         density=density,
         slices=["embb"],
-        basestations=["OptAlgo", "Nahum\'s", "RR"],
+        basestations=["SOA", "Nahum\'s", "RR"],
         plot_requirement=False
     )
     plotter.plot_slice_metric_cdf(
         plot="rbg_alloc_norm_cdf",
         density=density,
         slices=["urllc"],
-        basestations=["OptAlgo", "Nahum\'s", "RR"],
+        basestations=["SOA", "Nahum\'s", "RR"],
         plot_requirement=False
     )
     plotter.plot_slice_metric_cdf(
         plot="rbg_alloc_norm_cdf",
         density=density,
         slices=["be"],
-        basestations=["OptAlgo", "Nahum\'s", "RR"],
+        basestations=["SOA", "Nahum\'s", "RR"],
         plot_requirement=False
     )
 
@@ -160,14 +160,14 @@ if __name__ == "__main__":
                 plot=plot,
                 density=density,
                 slices=[s],
-                basestations=["OptAlgo", "Nahum\'s", "RR"],
+                basestations=["SOA", "Nahum\'s", "RR"],
                 plot_requirement=True
             )
             plotter.plot_slice_metric_cdf(
                 plot=plot+"_cdf",
                 density=density,
                 slices=[s],
-                basestations=["OptAlgo", "Nahum\'s", "RR"],
+                basestations=["SOA", "Nahum\'s", "RR"],
                 plot_requirement=True
             )
     
@@ -177,14 +177,14 @@ if __name__ == "__main__":
                 plot=plot,
                 density=density,
                 slices=[s],
-                basestations=["OptAlgo", "Nahum\'s", "RR"],
+                basestations=["SOA", "Nahum\'s", "RR"],
                 plot_requirement=True
             )
             plotter.plot_slice_metric_cdf(
                 plot=plot+"_cdf",
                 density=density,
                 slices=[s],
-                basestations=["OptAlgo", "Nahum\'s", "RR"],
+                basestations=["SOA", "Nahum\'s", "RR"],
                 plot_requirement=True
             )
 

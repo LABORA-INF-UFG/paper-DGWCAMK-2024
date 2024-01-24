@@ -587,7 +587,7 @@ class Plotter:
         self.plots:List[str] = list(self.config.keys())
 
         self.colors:Dict[str, str] = {
-            "OptAlgo": "blue",
+            "SOA": "blue",
             "RR": "orange",
             "Nahum\'s": "green",
             "embb": "olive",
