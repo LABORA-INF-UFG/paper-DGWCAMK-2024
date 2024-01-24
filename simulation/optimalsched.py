@@ -1,3 +1,5 @@
+# NOT USED IN THE FINAL VERSION OF THE PAPER
+
 from typing import Dict, List
 
 from pyomo import environ as pyo

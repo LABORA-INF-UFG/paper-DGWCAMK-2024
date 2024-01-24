@@ -140,7 +140,7 @@ if __name__ == "__main__":
     # )
 
     optheur_bs = sim.add_basestation(
-        inter_scheduler=intersched.OptimalHeuristic(
+        inter_scheduler=intersched.StepwiseOptimalAlgorithm(
             rb_bandwidth=sim.rb_bandwidth,
             rbs_per_rbg= sim.rbs_per_rbg,
             window_max=10,
