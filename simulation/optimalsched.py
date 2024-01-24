@@ -40,10 +40,10 @@ def optimize(
     m.S = pyo.Set(initialize = slices.keys())
 
     # SET: S_rlp_
-    m.S_rlp = pyo.Set(initialize = [s.id for s in slices.values() if s.type == "embb" or s.type == "urllc"])
+    m.S_rlp = pyo.Set(initialize = [s.id for s in slices.values() if s.type == "eMBB" or s.type == "URLLC"])
     
     # SET: S_fg
-    m.S_fg = pyo.Set(initialize = [s.id for s in slices.values() if s.type == "be"])
+    m.S_fg = pyo.Set(initialize = [s.id for s in slices.values() if s.type == "BE"])
 
     # SET: U
     m.U = pyo.Set(initialize = users.keys())

@@ -47,7 +47,7 @@ if __name__ == "__main__":
         print("max:", np.max(bs.hist_n_allocated_RBGs)/len(bs.rbgs)*100)
         for s in bs.slices.values():
             print("No resource for {} in {}% of the steps".format(s.type, sum([1 for x in s.hist_n_allocated_RBGs if x == 0])/2000 * 100))
-            if s.type == "embb":
+            if s.type == "eMBB":
                 print("Maximum eMBB packet loss rate: {}\%".format(max(max(u.hist_pkt_loss) * 100 for u in s.users.values())))
         # if bs.name == "Nahum\'s":
         #     print("Nahum\s action set =", bs.action_set)
@@ -91,7 +91,7 @@ if __name__ == "__main__":
         basestations=["SOA", "Nahum\'s", "RR"],
     )
     
-    for s in ["embb", "urllc", "be"]:
+    for s in ["eMBB", "URLLC", "BE"]:
         plotter.plot_slice_metric_line(
             plot="rbg_alloc",
             density=density,
@@ -135,27 +135,27 @@ if __name__ == "__main__":
     plotter.plot_slice_metric_cdf(
         plot="rbg_alloc_norm_cdf",
         density=density,
-        slices=["embb"],
+        slices=["eMBB"],
         basestations=["SOA", "Nahum\'s", "RR"],
         plot_requirement=False
     )
     plotter.plot_slice_metric_cdf(
         plot="rbg_alloc_norm_cdf",
         density=density,
-        slices=["urllc"],
+        slices=["URLLC"],
         basestations=["SOA", "Nahum\'s", "RR"],
         plot_requirement=False
     )
     plotter.plot_slice_metric_cdf(
         plot="rbg_alloc_norm_cdf",
         density=density,
-        slices=["be"],
+        slices=["BE"],
         basestations=["SOA", "Nahum\'s", "RR"],
         plot_requirement=False
     )
 
     for plot in be_plots:
-        for s in ["be"]:
+        for s in ["BE"]:
             plotter.plot_slice_metric_line(
                 plot=plot,
                 density=density,
@@ -172,7 +172,7 @@ if __name__ == "__main__":
             )
     
     for plot in embb_urllc_plots:
-        for s in ["embb", "urllc"]:
+        for s in ["eMBB", "URLLC"]:
             plotter.plot_slice_metric_line(
                 plot=plot,
                 density=density,

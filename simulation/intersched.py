@@ -300,11 +300,11 @@ class SAC(InterSliceScheduler):
 
     def get_slice_obs_requirements(self, s: Slice) -> np.array:
         requirements = []
-        if s.type == "embb" or s.type == "urllc":
+        if s.type == "eMBB" or s.type == "URLLC":
             requirements.append(s.requirements["latency"])
             requirements.append(s.requirements["throughput"])
             requirements.append(s.requirements["pkt_loss"])
-        elif s.type == "be":
+        elif s.type == "BE":
             requirements.append(s.requirements["long_term_thr"])
             requirements.append(s.requirements["fifth_perc_thr"])
         return np.array(requirements)

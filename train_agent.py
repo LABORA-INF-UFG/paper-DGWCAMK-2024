@@ -14,7 +14,7 @@ if __name__ == "__main__":
     # Configuring slices
 
     embb_config = SliceConfiguration(
-        type="embb",
+        type="eMBB",
         requirements={
             "latency": 20, # TTIs
             "throughput": 10e6, # bits/s
@@ -30,7 +30,7 @@ if __name__ == "__main__":
     )
 
     urllc_config = SliceConfiguration(
-        type="urllc",
+        type="URLLC",
         requirements={
             "latency": 1, # TTI
             "throughput": 1e6, # bits/s
@@ -46,7 +46,7 @@ if __name__ == "__main__":
     )
     
     be_config = SliceConfiguration(
-        type="be",
+        type="BE",
         requirements={
             "long_term_thr": 5e6, # bits/s
             "fifth_perc_thr": 2e6, # bits/s
@@ -84,19 +84,19 @@ if __name__ == "__main__":
 
     for bs_id in bs_ids:
         # Instantiating slices
-        embb = sim.add_slice(
+        eMBB = sim.add_slice(
             basestation_id=bs_id,
             slice_config=embb_config,
             intra_scheduler=intrasched.RoundRobin()
         )
 
-        urllc = sim.add_slice(
+        URLLC = sim.add_slice(
             basestation_id=bs_id,
             slice_config=urllc_config,
             intra_scheduler=intrasched.RoundRobin()
         )
         
-        be = sim.add_slice(
+        BE = sim.add_slice(
             basestation_id=bs_id,
             slice_config=be_config,
             intra_scheduler=intrasched.RoundRobin()
@@ -105,19 +105,19 @@ if __name__ == "__main__":
         # Instantiating users
         urllc_users = sim.add_users(
             basestation_id=bs_id,
-            slice_id=urllc,
+            slice_id=URLLC,
             n_users=3
         )
 
         be_users = sim.add_users(
             basestation_id=bs_id,
-            slice_id=be,
+            slice_id=BE,
             n_users=4
         )
         
         embb_users = sim.add_users(
             basestation_id=bs_id,
-            slice_id=embb,
+            slice_id=eMBB,
             n_users=3
         )
     

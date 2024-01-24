@@ -11,7 +11,7 @@ from simulation.intrasched import IntraSliceScheduler, RoundRobin
 class SliceConfiguration:
     def __init__(
         self,
-        type: str, # embb, urllc, be...
+        type: str, # eMBB, URLLC, BE...
         requirements: Dict[str, float],
         user_config: UserConfiguration,
     ):

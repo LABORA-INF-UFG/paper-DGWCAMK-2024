@@ -34,9 +34,9 @@ class Env(gymnasium.Env):
         self.action_space = gymnasium.spaces.Box(low=-1, high=1, shape=(len(self.bs.slices),))
         self.obs_space_length = 0
         for s in self.bs.slices.values():
-            if s.type == "embb" or s.type == "urllc":
+            if s.type == "eMBB" or s.type == "URLLC":
                 self.obs_space_length += 3 + 9
-            elif s.type == "be":
+            elif s.type == "BE":
                 self.obs_space_length += 2 + 9
         self.observation_space = gymnasium.spaces.Box(
             low=0,
@@ -80,11 +80,11 @@ class Env(gymnasium.Env):
     def get_slice_obs_requirements(self, slice_id: int) -> np.array:
         s = self.bs.slices[slice_id]
         requirements = []
-        if s.type == "embb" or s.type == "urllc":
+        if s.type == "eMBB" or s.type == "URLLC":
             requirements.append(s.requirements["latency"])
             requirements.append(s.requirements["throughput"])
             requirements.append(s.requirements["pkt_loss"])
-        elif s.type == "be":
+        elif s.type == "BE":
             requirements.append(s.requirements["long_term_thr"])
             requirements.append(s.requirements["fifth_perc_thr"])
         return np.array(requirements)
@@ -151,7 +151,7 @@ class Env(gymnasium.Env):
             loss = s.get_pkt_loss_rate(window=self.window)
             long = s.get_long_term_thr(window=self.window)
             fif = s.get_fifth_perc_thr(window=self.window)
-            if s.type == "embb":
+            if s.type == "eMBB":
                 thr_req = s.requirements["throughput"]
                 lat_req = s.requirements["latency"] * self.TTI
                 loss_req = s.requirements["pkt_loss"]
@@ -159,7 +159,7 @@ class Env(gymnasium.Env):
                 reward += -w_embb_thr * (thr_req - thr)/thr_req if thr < thr_req else 0
                 reward += -w_embb_lat * (lat - lat_req)/(max_lat-lat_req) if lat > lat_req else 0
                 reward += -w_embb_loss * (loss - loss_req)/(1-loss_req) if loss > loss_req else 0
-            if s.type == "urllc":
+            if s.type == "URLLC":
                 thr_req = s.requirements["throughput"]
                 lat_req = s.requirements["latency"] * self.TTI
                 loss_req = s.requirements["pkt_loss"]
@@ -167,7 +167,7 @@ class Env(gymnasium.Env):
                 reward += -w_urllc_thr * (thr_req - thr)/thr_req if thr < thr_req else 0
                 reward += -w_urllc_lat * (lat - lat_req)/(max_lat-lat_req) if lat > lat_req else 0
                 reward += -w_urllc_loss * (loss - loss_req)/(1-loss_req) if loss > loss_req else 0
-            if s.type == "be":
+            if s.type == "BE":
                 long_req = s.requirements["long_term_thr"]
                 fif_req = s.requirements["fifth_perc_thr"]
                 reward += -w_be_long * (long_req - long)/long_req if long < long_req else 0

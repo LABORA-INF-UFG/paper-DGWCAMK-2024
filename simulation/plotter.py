@@ -590,9 +590,9 @@ class Plotter:
             "SOA": "blue",
             "RR": "orange",
             "Nahum\'s": "green",
-            "embb": "olive",
-            "urllc": "pink",
-            "be": "brown",
+            "eMBB": "olive",
+            "URLLC": "pink",
+            "BE": "brown",
         }
 
     def calculate_slice_metric(self, plot: str, basestation: BaseStation, slice: Slice) -> np.array:
@@ -768,7 +768,7 @@ class Plotter:
             bbox_to_anchor=self.config[plot]["legend"]["bbox_to_anchor"],
             loc=self.config[plot]["legend"]["loc"]
         )
-        # if slices is not None and slices[0] == "urllc" and plot in ["pkt_loss", "pkt_loss_worst"]:
+        # if slices is not None and slices[0] == "URLLC" and plot in ["pkt_loss", "pkt_loss_worst"]:
         #     plt.ylim(0, 0.002)
         path = self.config[plot]["savefig"]["path"]
         if slices is not None:
@@ -912,7 +912,7 @@ class Plotter:
             bbox_to_anchor=self.config[plot]["legend"]["bbox_to_anchor"],
             loc=self.config[plot]["legend"]["loc"]
         )
-        # if slices is not None and slices[0] == "urllc" and plot in ["pkt_loss", "pkt_loss_worst"]:
+        # if slices is not None and slices[0] == "URLLC" and plot in ["pkt_loss", "pkt_loss_worst"]:
         #     plt.ylim(0, 0.002)
         path = self.config[plot]["savefig"]["path"]
         if slices is not None:
@@ -922,48 +922,48 @@ class Plotter:
         plt.close('all')
 
     def get_bar_position(self, plot:str, slice:str, labels: List[str]) -> int:
-        if slice == "be" and plot == "long_term_thr":
-            return labels.index("be long-term thr")
-        elif slice == "be" and plot == "fifth_perc_thr":
-            return labels.index("be fifth-perc thr")
-        elif slice == "embb" and plot == "serv_thr":
-            return labels.index("embb serv thr")
-        elif slice == "embb" and plot == "pkt_loss":
-            return labels.index("embb pkt loss")
-        elif slice == "embb" and plot == "avg_buff_lat":
-            return labels.index("embb avg buff lat")
-        elif slice == "urllc" and plot == "serv_thr":
-            return labels.index("urllc serv thr")
-        elif slice == "urllc" and plot == "pkt_loss":
-            return labels.index("urllc pkt loss")
-        elif slice == "urllc" and plot == "avg_buff_lat":
-            return labels.index("urllc avg buff lat")
+        if slice == "BE" and plot == "long_term_thr":
+            return labels.index("BE long-term thr")
+        elif slice == "BE" and plot == "fifth_perc_thr":
+            return labels.index("BE fifth-perc thr")
+        elif slice == "eMBB" and plot == "serv_thr":
+            return labels.index("eMBB serv thr")
+        elif slice == "eMBB" and plot == "pkt_loss":
+            return labels.index("eMBB pkt loss")
+        elif slice == "eMBB" and plot == "avg_buff_lat":
+            return labels.index("eMBB avg buff lat")
+        elif slice == "URLLC" and plot == "serv_thr":
+            return labels.index("URLLC serv thr")
+        elif slice == "URLLC" and plot == "pkt_loss":
+            return labels.index("URLLC pkt loss")
+        elif slice == "URLLC" and plot == "avg_buff_lat":
+            return labels.index("URLLC avg buff lat")
 
     def plot_disrespected_steps(self, plot_title:bool = False, log_scale:bool = False) -> None:
         sns.set_style("ticks")
         labels = [
-            'embb pkt loss', 'embb avg buff lat','embb serv thr', 
-            'be long-term thr', 'be fifth-perc thr',
-            'urllc serv thr', 'urllc pkt loss', 'urllc avg buff lat'
+            'eMBB pkt loss', 'eMBB avg buff lat','eMBB serv thr', 
+            'BE long-term thr', 'BE fifth-perc thr',
+            'URLLC serv thr', 'URLLC pkt loss', 'URLLC avg buff lat'
         ]
         be_plots = [
             "fifth_perc_thr","long_term_thr",
         ]
-        embb_urllc_plots=[
+        eMBB_URLLC_plots=[
             "avg_buff_lat", "pkt_loss", "serv_thr",
         ]
         bs_values:Dict[str, Dict[str, List[int]]] = {}
         for bs_id, bs in self.sim.basestations.items():
             bs_values[bs.name] = {}
             for slice_id, slice in bs.slices.items():
-                if slice.type == "be":
+                if slice.type == "BE":
                     for plot in be_plots:
                         disr = self.get_slice_disrespected_steps(plot,slice)
                         pos = self.get_bar_position(plot, slice.type, labels)
                         bs_values[bs.name][labels[pos]] = sum(disr)
                         #print("Disrespected steps for {}-{}-{}: {}".format(bs.name, slice.type, plot, sum(disr)))
-                elif slice.type in ["embb", "urllc"]:
-                    for plot in embb_urllc_plots:
+                elif slice.type in ["eMBB", "URLLC"]:
+                    for plot in eMBB_URLLC_plots:
                         disr = self.get_slice_disrespected_steps(plot,slice)
                         pos = self.get_bar_position(plot, slice.type, labels)
                         bs_values[bs.name][labels[pos]] = sum(disr)
@@ -1007,7 +1007,7 @@ class Plotter:
             for l in labels:
                 two_line_lable = l.split(" ")
                 two_line_lable[0] += "\n"
-                if l in ["be long-term thr", "be fifth-perc thr"]:
+                if l in ["BE long-term thr", "BE fifth-perc thr"]:
                     two_line_lable[1] += "\n"
                 labels[labels.index(l)] = " ".join(two_line_lable)
             plt.xticks([i for i in range(len(labels))], labels)

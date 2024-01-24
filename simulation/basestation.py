@@ -146,7 +146,7 @@ class BaseStation:
             loss = s.get_pkt_loss_rate(window=self.window)
             long = s.get_long_term_thr(window=self.window)
             fif = s.get_fifth_perc_thr(window=self.window)
-            if s.type == "embb":
+            if s.type == "eMBB":
                 thr_req = s.requirements["throughput"]
                 lat_req = s.requirements["latency"] * self.TTI
                 loss_req = s.requirements["pkt_loss"]
@@ -154,7 +154,7 @@ class BaseStation:
                 reward += -w_embb_thr * (thr_req - thr)/thr_req if thr < thr_req else 0
                 reward += -w_embb_lat * (lat - lat_req)/(max_lat-lat_req) if lat > lat_req else 0
                 reward += -w_embb_loss * (loss - loss_req)/(1-loss_req) if loss > loss_req else 0
-            if s.type == "urllc":
+            if s.type == "URLLC":
                 thr_req = s.requirements["throughput"]
                 lat_req = s.requirements["latency"] * self.TTI
                 loss_req = s.requirements["pkt_loss"]
@@ -162,7 +162,7 @@ class BaseStation:
                 reward += -w_urllc_thr * (thr_req - thr)/thr_req if thr < thr_req else 0
                 reward += -w_urllc_lat * (lat - lat_req)/(max_lat-lat_req) if lat > lat_req else 0
                 reward += -w_urllc_loss * (loss - loss_req)/(1-loss_req) if loss > loss_req else 0
-            if s.type == "be":
+            if s.type == "BE":
                 long_req = s.requirements["long_term_thr"]
                 fif_req = s.requirements["fifth_perc_thr"]
                 reward += -w_be_long * (long_req - long)/long_req if long < long_req else 0
