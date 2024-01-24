@@ -44,3 +44,8 @@ To generate plots for the spectral efficiency dataset used in the experiments, e
 python plot_se.py <experiment_name>
 ```
 The experiment data is used only for setting up the Plotter class. The spectral efficiency data is the same for every experiment.
+
+The scheduling time for each scheduler can be checked with:
+```bash
+python check_scheduling_time.py <experiment_name>
+```
