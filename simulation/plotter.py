@@ -20,7 +20,8 @@ class Plotter:
 
         sns.set()
         sns.set_style("whitegrid")
-        
+        self.fontsize = 14
+
         self.config:Dict[str, dict] = {
             "fifth_perc_thr":{
                 "xlabel":"Time (ms)",
@@ -555,7 +556,7 @@ class Plotter:
             },
             "disrespected_steps":{
                 "xlabel":"Requirement",
-                "ylabel":"Times the requirement was disrespected",
+                "ylabel":"Count of SLA violations",
                 "title":"Disrespected requirements for {} experiment",
                 "label":"{}",
                 "legend":{
@@ -594,6 +595,12 @@ class Plotter:
             "URLLC": "pink",
             "BE": "brown",
         }
+
+    def init_figure(self) -> None:
+        plt.figure(figsize=(8,4))
+        plt.rc('font', family="sans-serif", size=self.fontsize)
+        plt.xticks(size=self.fontsize)
+        plt.yticks(size=self.fontsize)
 
     def calculate_slice_metric(self, plot: str, basestation: BaseStation, slice: Slice) -> np.array:
         if plot == "fifth_perc_thr":
@@ -726,7 +733,7 @@ class Plotter:
         plot_requirement: bool = False,
         plot_title:bool = False,
     ) -> None:
-        plt.figure()
+        self.init_figure()
         for bs_id, bs in self.sim.basestations.items():
             if basestations is not None and bs.name not in basestations:
                 continue
@@ -757,12 +764,12 @@ class Plotter:
                 linestyle='--',
                 label="requirement"
             )
-        plt.xlabel(self.config[plot]["xlabel"])
-        plt.ylabel(self.config[plot]["ylabel"])
+        plt.xlabel(self.config[plot]["xlabel"], fontsize=self.fontsize)
+        plt.ylabel(self.config[plot]["ylabel"], fontsize=self.fontsize)
         if slices is not None and len(slices) == 1 and plot_title:
-            plt.title(self.config[plot]["title_single_slice"].format(slices[0]))
+            plt.title(self.config[plot]["title_single_slice"].format(slices[0]), fontsize=self.fontsize)
         elif plot_title:
-            plt.title(self.config[plot]["title_multi_slice"])
+            plt.title(self.config[plot]["title_multi_slice"], fontsize=self.fontsize)
         plt.legend(
             ncol=self.config[plot]["legend"]["ncol"],
             bbox_to_anchor=self.config[plot]["legend"]["bbox_to_anchor"],
@@ -784,7 +791,7 @@ class Plotter:
         basestations: List[str] = None,
         plot_title:bool = False,
     ) -> None:
-        plt.figure()
+        self.init_figure()
         for bs_id, bs in self.sim.basestations.items():
             if basestations is not None and bs.name not in basestations:
                 continue
@@ -797,10 +804,10 @@ class Plotter:
                 label=self.config[plot]["label"].format(bs.name),
                 color=self.colors[bs.name]
             )
-        plt.xlabel(self.config[plot]["xlabel"])
-        plt.ylabel(self.config[plot]["ylabel"])
+        plt.xlabel(self.config[plot]["xlabel"], fontsize=self.fontsize)
+        plt.ylabel(self.config[plot]["ylabel"], fontsize=self.fontsize)
         if plot_title:
-            plt.title(self.config[plot]["title"])
+            plt.title(self.config[plot]["title"], fontsize=self.fontsize)
         plt.legend(
             ncol=self.config[plot]["legend"]["ncol"],
             bbox_to_anchor=self.config[plot]["legend"]["bbox_to_anchor"],
@@ -819,7 +826,7 @@ class Plotter:
         density:int = 1,
         plot_title:bool = False,
     ) -> None:
-        plt.figure()
+        self.init_figure()
         if plot in ["slice_se", "slice_se_worst"]:
             for slice_id, slice in list(self.sim.basestations.values())[0].slices.items():
                 metric = self.calculate_se_metric(plot, trial, list(slice.users.keys()), multipliers)
@@ -842,10 +849,10 @@ class Plotter:
                     label=self.config[plot]["label"].format(ue + 1)
                 )
         
-        plt.xlabel(self.config[plot]["xlabel"])
-        plt.ylabel(self.config[plot]["ylabel"])
+        plt.xlabel(self.config[plot]["xlabel"], fontsize=self.fontsize)
+        plt.ylabel(self.config[plot]["ylabel"], fontsize=self.fontsize)
         if plot_title:
-            plt.title(self.config[plot]["title"])
+            plt.title(self.config[plot]["title"], fontsize=self.fontsize)
         plt.legend(
             ncol=self.config[plot]["legend"]["ncol"],
             bbox_to_anchor=self.config[plot]["legend"]["bbox_to_anchor"],
@@ -868,7 +875,7 @@ class Plotter:
         plot_requirement: bool = False,
         plot_title:bool = False,
     ) -> None:
-        plt.figure()
+        self.init_figure()
         for bs_id, bs in self.sim.basestations.items():
             if basestations is not None and bs.name not in basestations:
                 continue
@@ -901,12 +908,12 @@ class Plotter:
                 label="requirement",
                 linewidth=2,
             )
-        plt.xlabel(self.config[plot]["xlabel"])
-        plt.ylabel(self.config[plot]["ylabel"])
+        plt.xlabel(self.config[plot]["xlabel"], fontsize=self.fontsize)
+        plt.ylabel(self.config[plot]["ylabel"], fontsize=self.fontsize)
         if slices is not None and len(slices) == 1 and plot_title:
-            plt.title(self.config[plot]["title_single_slice"].format(slices[0]))
+            plt.title(self.config[plot]["title_single_slice"].format(slices[0]), fontsize=self.fontsize)
         elif plot_title:
-            plt.title(self.config[plot]["title_multi_slice"])
+            plt.title(self.config[plot]["title_multi_slice"], fontsize=self.fontsize)
         plt.legend(
             ncol=self.config[plot]["legend"]["ncol"],
             bbox_to_anchor=self.config[plot]["legend"]["bbox_to_anchor"],
@@ -923,28 +930,28 @@ class Plotter:
 
     def get_bar_position(self, plot:str, slice:str, labels: List[str]) -> int:
         if slice == "BE" and plot == "long_term_thr":
-            return labels.index("BE long-term thr")
+            return labels.index("BE\nlong-term thr")
         elif slice == "BE" and plot == "fifth_perc_thr":
-            return labels.index("BE fifth-perc thr")
+            return labels.index("BE\nfifth-perc thr")
         elif slice == "eMBB" and plot == "serv_thr":
-            return labels.index("eMBB serv thr")
+            return labels.index("eMBB\nserv thr")
         elif slice == "eMBB" and plot == "pkt_loss":
-            return labels.index("eMBB pkt loss")
+            return labels.index("eMBB\npkt loss")
         elif slice == "eMBB" and plot == "avg_buff_lat":
-            return labels.index("eMBB avg buff lat")
+            return labels.index("eMBB\navg buff lat")
         elif slice == "URLLC" and plot == "serv_thr":
-            return labels.index("URLLC serv thr")
+            return labels.index("URLLC\nserv thr")
         elif slice == "URLLC" and plot == "pkt_loss":
-            return labels.index("URLLC pkt loss")
+            return labels.index("URLLC\npkt loss")
         elif slice == "URLLC" and plot == "avg_buff_lat":
-            return labels.index("URLLC avg buff lat")
+            return labels.index("URLLC\navg buff lat")
 
     def plot_disrespected_steps(self, plot_title:bool = False, log_scale:bool = False) -> None:
         sns.set_style("ticks")
         labels = [
-            'eMBB pkt loss', 'eMBB avg buff lat','eMBB serv thr', 
-            'BE long-term thr', 'BE fifth-perc thr',
-            'URLLC serv thr', 'URLLC pkt loss', 'URLLC avg buff lat'
+            'eMBB\npkt loss', 'eMBB\navg buff lat','eMBB\nserv thr', 
+            'BE\nlong-term thr', 'BE\nfifth-perc thr',
+            'URLLC\nserv thr', 'URLLC\npkt loss', 'URLLC\navg buff lat'
         ]
         be_plots = [
             "fifth_perc_thr","long_term_thr",
@@ -970,7 +977,8 @@ class Plotter:
                         # if plot == "avg_buff_lat":
                         #     print(bs.name, disr)
                         #print("Disrespected steps for {}-{}-{}: {}".format(bs.name, slice.type, plot, sum(disr)))
-        plt.figure()
+        self.init_figure()
+        plt.grid(axis="y")
         plot = "disrespected_steps"
         to_remove = []
         for l in labels:
@@ -1000,9 +1008,9 @@ class Plotter:
             )
             plt.bar_label(bar_container)
         if plot_title:
-            plt.title(self.config[plot]["title"].format(self.sim.experiment_name))
-        plt.xlabel(self.config[plot]["xlabel"])
-        plt.ylabel(self.config[plot]["ylabel"])
+            plt.title(self.config[plot]["title"].format(self.sim.experiment_name), fontsize=self.fontsize)
+        plt.xlabel(self.config[plot]["xlabel"], fontsize=self.fontsize)
+        plt.ylabel(self.config[plot]["ylabel"], fontsize=self.fontsize)
         if self.sim.experiment_name == "minimum":
             for l in labels:
                 two_line_lable = l.split(" ")
@@ -1010,13 +1018,14 @@ class Plotter:
                 if l in ["BE long-term thr", "BE fifth-perc thr"]:
                     two_line_lable[1] += "\n"
                 labels[labels.index(l)] = " ".join(two_line_lable)
-            plt.xticks([i for i in range(len(labels))], labels)
+            plt.xticks([i for i in range(len(labels))], labels, fontsize=self.fontsize)
         else:
-            plt.xticks([i for i in range(len(labels))], labels)
+            plt.xticks([i for i in range(len(labels))], labels, fontsize=self.fontsize)
         # plt.xticks([i for i in range(len(labels))], labels, rotation=60, ha="right")
         # plt.xticks(rotation=60, ha="right")
         if log_scale:
             plt.yscale("log")
+        plt.ylim(0, 1.07 * max([v for values in bs_values.values() for v in values.values() ])) # Padding at the top of the figure
         plt.legend(
             ncol=self.config[plot]["legend"]["ncol"],
             bbox_to_anchor=self.config[plot]["legend"]["bbox_to_anchor"],
@@ -1030,7 +1039,7 @@ class Plotter:
 
     def plot_arrived_thr_line(self, density: int):
         plot = "arrived_thr"
-        plt.figure()
+        self.init_figure()
         bs = list(self.sim.basestations.values())[0]
         for slice_id, slice in bs.slices.items():
             metric = np.average([u.hist_arriv_pkt_bits for u in slice.users.values()], axis=0)/self.sim.TTI /1e6
@@ -1042,9 +1051,9 @@ class Plotter:
                 label=self.config[plot]["label"].format(slice.type),
                 color=self.colors[slice.type]
             )
-        plt.xlabel(self.config[plot]["xlabel"])
-        plt.ylabel(self.config[plot]["ylabel"])
-        plt.title(self.config[plot]["title"])
+        plt.xlabel(self.config[plot]["xlabel"], fontsize=self.fontsize)
+        plt.ylabel(self.config[plot]["ylabel"], fontsize=self.fontsize)
+        plt.title(self.config[plot]["title"], fontsize=self.fontsize)
         plt.legend(
             ncol=self.config[plot]["legend"]["ncol"],
             bbox_to_anchor=self.config[plot]["legend"]["bbox_to_anchor"],
