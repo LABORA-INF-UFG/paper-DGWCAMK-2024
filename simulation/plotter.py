@@ -20,7 +20,10 @@ class Plotter:
 
         sns.set()
         sns.set_style("whitegrid")
-        self.fontsize = 18
+        self.fontsize = 20
+        plt.rcParams['mathtext.fontset'] = 'cm'  # Use Computer Modern (LaTeX default) font for math text
+        plt.rcParams['mathtext.rm'] = 'serif'  # Use serif font for 'rm' style mathtext
+
 
         self.config:Dict[str, dict] = {
             "fifth_perc_thr":{
@@ -597,7 +600,7 @@ class Plotter:
         }
 
     def init_figure(self) -> None:
-        plt.figure(figsize=(8,4))
+        fig = plt.figure(figsize=(8,4))
         plt.rc('font', family="sans-serif", size=self.fontsize)
         plt.xticks(size=self.fontsize)
         plt.yticks(size=self.fontsize)
@@ -939,28 +942,28 @@ class Plotter:
 
     def get_bar_position(self, plot:str, slice:str, labels: List[str]) -> int:
         if slice == "BE" and plot == "long_term_thr":
-            return labels.index("BE\nlong-term thr")
+            return labels.index(r"$\mathit{g_{BE}^{req}}$")
         elif slice == "BE" and plot == "fifth_perc_thr":
-            return labels.index("BE\nfifth-perc thr")
+            return labels.index(r"$\mathit{f_{BE}^{req}}$")
         elif slice == "eMBB" and plot == "serv_thr":
-            return labels.index("eMBB\nserv thr")
+            return labels.index(r"$\mathit{t_{eMBB}^{req}}$")
         elif slice == "eMBB" and plot == "pkt_loss":
-            return labels.index("eMBB\npkt loss")
+            return labels.index(r"$\mathit{p_{eMBB}^{req}}$")
         elif slice == "eMBB" and plot == "avg_buff_lat":
-            return labels.index("eMBB\navg buff lat")
+            return labels.index(r"$\mathit{l_{eMBB}^{req}}$")
         elif slice == "URLLC" and plot == "serv_thr":
-            return labels.index("URLLC\nserv thr")
+            return labels.index(r"$\mathit{t_{URLLC}^{req}}$")
         elif slice == "URLLC" and plot == "pkt_loss":
-            return labels.index("URLLC\npkt loss")
+            return labels.index(r"$\mathit{p_{URLLC}^{req}}$")
         elif slice == "URLLC" and plot == "avg_buff_lat":
-            return labels.index("URLLC\navg buff lat")
+            return labels.index(r"$\mathit{l_{URLLC}^{req}}$")
 
     def plot_disrespected_steps(self, plot_title:bool = False, log_scale:bool = False) -> None:
         sns.set_style("ticks")
         labels = [
-            'eMBB\npkt loss', 'eMBB\navg buff lat','eMBB\nserv thr', 
-            'BE\nlong-term thr', 'BE\nfifth-perc thr',
-            'URLLC\nserv thr', 'URLLC\npkt loss', 'URLLC\navg buff lat'
+            r'$\mathit{p_{eMBB}^{req}}$', r'$\mathit{l_{eMBB}^{req}}$', r'$\mathit{t_{eMBB}^{req}}$', 
+            r'$\mathit{f_{BE}^{req}}$', r'$\mathit{g_{BE}^{req}}$',
+            r'$\mathit{t_{URLLC}^{req}}$', r'$\mathit{p_{URLLC}^{req}}$', r'$\mathit{l_{URLLC}^{req}}$'
         ]
         be_plots = [
             "fifth_perc_thr","long_term_thr",
@@ -1002,7 +1005,10 @@ class Plotter:
         for bs in self.sim.basestations.values():
             if bs.name in bs_values and sum(bs_values[bs.name].values()) == 0:
                 del bs_values[bs.name]
-        bar_width = 0.9 / len(bs_values)  # Adjust as needed
+        if self.sim.experiment_name == "minimum":
+            bar_width = 1.0 / len(bs_values)  # Adjust as needed
+        elif self.sim.experiment_name == "standard":
+            bar_width = 0.6 / len(bs_values)
         bar_positions = {bs: [i - (bar_width / 2) * (len(bs_values) - 1) + j * bar_width for i in range(len(labels))] for j, bs in enumerate(bs_values.keys())}
         # print(bs_values)
         for bs_id, bs in self.sim.basestations.items():
@@ -1015,32 +1021,35 @@ class Plotter:
                 label=self.config[plot]["label"].format(bs.name),
                 color=self.colors[bs.name],
             )
-            plt.bar_label(bar_container)
+            plt.bar_label(bar_container, fontsize=16.5)
         if plot_title:
             plt.title(self.config[plot]["title"].format(self.sim.experiment_name), fontsize=self.fontsize)
-        plt.xlabel(self.config[plot]["xlabel"], fontsize=self.fontsize)
+        # plt.xlabel(self.config[plot]["xlabel"], fontsize=self.fontsize)
         plt.ylabel(self.config[plot]["ylabel"], fontsize=self.fontsize)
         if self.sim.experiment_name == "minimum":
             for l in labels:
                 two_line_lable = l.split(" ")
                 two_line_lable[0] += "\n"
-                if l in ["BE long-term thr", "BE fifth-perc thr"]:
-                    two_line_lable[1] += "\n"
+                # if l in ["BE long-term thr", "BE fifth-perc thr"]:
+                #     two_line_lable[1] += "\n"
                 labels[labels.index(l)] = " ".join(two_line_lable)
             plt.xticks([i for i in range(len(labels))], labels, fontsize=self.fontsize)
+            plt.gca().set_xlabel(self.config[plot]["xlabel"], fontsize=self.fontsize, labelpad=-14)
         else:
             plt.xticks([i for i in range(len(labels))], labels, fontsize=self.fontsize)
+            plt.gca().set_xlabel(self.config[plot]["xlabel"], fontsize=self.fontsize, labelpad=4)
         # plt.xticks([i for i in range(len(labels))], labels, rotation=60, ha="right")
         # plt.xticks(rotation=60, ha="right")
         if log_scale:
             plt.yscale("log")
-        plt.ylim(0, 1.07 * max([v for values in bs_values.values() for v in values.values() ])) # Padding at the top of the figure
-        plt.legend(
-            ncol=self.config[plot]["legend"]["ncol"],
-            bbox_to_anchor=self.config[plot]["legend"]["bbox_to_anchor"],
-            loc=self.config[plot]["legend"]["loc"],
-            fontsize=self.fontsize
-        )
+        plt.ylim(0, 1.1 * max([v for values in bs_values.values() for v in values.values() ])) # Padding at the top of the figure
+        if self.sim.experiment_name == "minimum":
+            plt.legend(
+                ncol=self.config[plot]["legend"]["ncol"],
+                bbox_to_anchor=self.config[plot]["legend"]["bbox_to_anchor"],
+                loc=self.config[plot]["legend"]["loc"],
+                fontsize=self.fontsize
+            )
         path = self.config[plot]["savefig"]["path"]
         path += self.config[plot]["savefig"]["filename"]
         
