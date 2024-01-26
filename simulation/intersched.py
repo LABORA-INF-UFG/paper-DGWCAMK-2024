@@ -274,9 +274,11 @@ class SAC(InterSliceScheduler):
     def __init__(
         self,
         window_max: int,
+        TTI: float,
         best_model_zip_path: str,
     ) -> None:
         self.window_max = window_max
+        self.TTI = TTI
         self.agent = stable_baselines3.SAC.load(best_model_zip_path, None, verbose=0)
         self.action_space_options = None
         self.window = 1
@@ -301,7 +303,7 @@ class SAC(InterSliceScheduler):
     def get_slice_obs_requirements(self, s: Slice) -> np.array:
         requirements = []
         if s.type == "eMBB" or s.type == "URLLC":
-            requirements.append(s.requirements["latency"])
+            requirements.append(s.requirements["latency"]*self.TTI)
             requirements.append(s.requirements["throughput"])
             requirements.append(s.requirements["pkt_loss"])
         elif s.type == "BE":

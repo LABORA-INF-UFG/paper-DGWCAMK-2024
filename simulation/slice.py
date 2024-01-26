@@ -104,76 +104,95 @@ class Slice:
         self.scheduler.schedule(rbgs=self.rbgs, users=self.users)
 
     def get_avg_se(self) -> float:
-        if len(self.users) == 0:
-            return 0
-        result = 0.0
-        for u in self.users.values():
-            result += u.SE
-        return result/len(self.users)
+        return np.mean([u.SE for u in self.users.values()])
+        # if len(self.users) == 0:
+        #     return 0
+        # result = 0.0
+        # for u in self.users.values():
+        #     result += u.SE
+        # return result/len(self.users)
 
     def get_served_thr(self) -> float:
-        if len(self.users) == 0 or self.step == 0:
-            return 0
-        result = 0.0
-        for u in self.users.values():
-            result += u.get_actual_throughput()
-        return result/len(self.users)
+        return np.mean([u.get_actual_throughput() for u in self.users.values()])
+        # if len(self.users) == 0 or self.step == 0:
+        #     return 0
+        # result = 0.0
+        # for u in self.users.values():
+        #     result += u.get_actual_throughput()
+        # return result/len(self.users)
 
     def get_buffer_occupancy(self) -> float:
-        if len(self.users) == 0:
-            return 0
-        result = 0.0
-        for u in self.users.values():
-            result += u.get_buffer_occupancy()
-        return result/len(self.users)
+        return np.mean([u.get_buffer_occupancy() for u in self.users.values()])
+        # if len(self.users) == 0:
+        #     return 0
+        # result = 0.0
+        # for u in self.users.values():
+        #     result += u.get_buffer_occupancy()
+        # return result/len(self.users)
 
     def get_avg_buffer_latency(self) -> float:
-        if len(self.users) == 0:
+        if self.step == 0:
             return 0
-        result = 0.0
-        for u in self.users.values():
-            result += u.get_avg_buffer_latency()
-        return result/len(self.users)
+        return np.mean([user.hist_avg_buff_lat[-1] for user in self.users.values()])
+        # if len(self.users) == 0:
+        #     return 0
+        # result = 0.0
+        # for u in self.users.values():
+        #     result += u.get_avg_buffer_latency()
+        # return result/len(self.users)
     
     def get_pkt_loss_rate(self, window:int) -> float:
-        if len(self.users) == 0:
+        if self.step == 0:
             return 0
-        result = 0.0
-        for u in self.users.values():
-            result += u.get_pkt_loss_rate(window)
-        return result/len(self.users)
+        return np.mean([u.hist_pkt_loss[-1] for u in self.users.values()])
+        # if len(self.users) == 0:
+        #     return 0
+        # result = 0.0
+        # for u in self.users.values():
+        #     result += u.get_pkt_loss_rate(window)
+        # return result/len(self.users)
     
     def get_sent_thr(self, window:int) -> float:
-        if len(self.users) == 0 or self.step == 0:
+        if self.step == 0:
             return 0
-        result = 0.0
-        for u in self.users.values():
-            result += u.get_sent_thr(window)
-        return result/len(self.users)
+        return np.mean([u.hist_sent_pkt_bits[-1]/self.TTI for u in self.users.values()])
+        # if len(self.users) == 0 or self.step == 0:
+        #     return 0
+        # result = 0.0
+        # for u in self.users.values():
+        #     result += u.get_sent_thr(window)
+        # return result/len(self.users)
 
     def get_arriv_thr(self, window:int) -> float:
-        if len(self.users) == 0:
-            return 0
-        result = 0.0
-        for u in self.users.values():
-            result += u.get_arriv_thr(window)
-        return result/len(self.users)
+        return np.mean([u.hist_arriv_pkt_bits[-1]/self.TTI for u in self.users.values()])
+        # if len(self.users) == 0:
+        #     return 0
+        # result = 0.0
+        # for u in self.users.values():
+        #     result += u.get_arriv_thr(window)
+        # return result/len(self.users)
     
     def get_long_term_thr(self, window:int) -> float:
-        if len(self.users) == 0 or self.step == 0:
+        if self.step == 0:
             return 0
-        result = 0.0
-        for u in self.users.values():
-            result += u.get_long_term_thr(window)
-        return result/len(self.users)
+        return np.mean([u.hist_long_term_thr[-1] for u in self.users.values()])
+        # if len(self.users) == 0 or self.step == 0:
+        #     return 0
+        # result = 0.0
+        # for u in self.users.values():
+        #     result += u.get_long_term_thr(window)
+        # return result/len(self.users)
 
     def get_fifth_perc_thr(self, window:int) -> float:
-        if len(self.users) == 0 or self.step == 0:
+        if self.step == 0:
             return 0
-        result = 0.0
-        for u in self.users.values():
-            result += u.get_fifth_perc_thr(window)
-        return result/len(self.users)
+        return np.mean([u.hist_fifth_perc_thr[-1] for u in self.users.values()])
+        # if len(self.users) == 0 or self.step == 0:
+        #     return 0
+        # result = 0.0
+        # for u in self.users.values():
+        #     result += u.get_fifth_perc_thr(window)
+        # return result/len(self.users)
 
     def get_worst_user_rrbgs(self) -> (int, int):
         worst_metric = len(list(self.users.values())[0].rbgs)

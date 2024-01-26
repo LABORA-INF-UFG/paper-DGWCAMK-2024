@@ -87,7 +87,6 @@ class User:
         self.hist_n_allocated_RBGs.append(len(self.rbgs))
         self.hist_avg_buff_lat.append(self.get_avg_buffer_latency())
         self.hist_dropp_pkt_bits.append(self.buff.get_dropp_pkts_bits(window=1))
-        self.hist_arriv_pkt_bits.append(self.buff.get_arriv_pkts_bits(window=1))
         self.hist_fifth_perc_thr.append(np.percentile(self.hist_allocated_throughput[-self.window:], 5))
         self.hist_long_term_thr.append(np.mean(self.hist_allocated_throughput[-self.window:]))
         self.hist_sent_pkt_bits.append(self.buff.get_sent_pkts_bits(window=1))
@@ -101,6 +100,7 @@ class User:
     
     def __hist_update_after_arrive(self) -> None:
         self.hist_spectral_efficiency.append(self.SE)
+        self.hist_arriv_pkt_bits.append(self.buff.get_arriv_pkts_bits(window=1))
 
     def get_actual_throughput(self) -> float:
         if self.SE is None:

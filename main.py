@@ -165,6 +165,7 @@ if __name__ == "__main__":
     sac_bs = sim.add_basestation(
         inter_scheduler=intersched.SAC(
             window_max=10,
+            TTI=sim.TTI,
             best_model_zip_path="./best_sac/best_model.zip"
         ),
         rbs_per_rbg=sim.rbs_per_rbg,
