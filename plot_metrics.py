@@ -54,7 +54,7 @@ if __name__ == "__main__":
         #     print(len(bs.action_set), "actions")
     
     plotter = Plotter(sim)
-    plotter.plot_disrespected_steps()
+    plotter.plot_disrespected_steps(log_scale=True)
     plotter.plot_se_line(
         plot="slice_se",
         multipliers=SE_multipliers,
