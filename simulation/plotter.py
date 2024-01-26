@@ -559,11 +559,11 @@ class Plotter:
             },
             "disrespected_steps":{
                 "xlabel":"Requirement",
-                "ylabel":"Count of SLA violations",
+                "ylabel":"SLA violations (log)",
                 "title":"Disrespected requirements for {} experiment",
                 "label":"{}",
                 "legend":{
-                    "ncol":1,
+                    "ncol":2,
                     "bbox_to_anchor":None,
                     "loc":"upper left" #(1.02, 0.2)
                 },
@@ -1006,7 +1006,7 @@ class Plotter:
             if bs.name in bs_values and sum(bs_values[bs.name].values()) == 0:
                 del bs_values[bs.name]
         if self.sim.experiment_name == "minimum":
-            bar_width = 1.0 / len(bs_values)  # Adjust as needed
+            bar_width = 0.9 / len(bs_values)  # Adjust as needed
         elif self.sim.experiment_name == "standard":
             bar_width = 0.6 / len(bs_values)
         bar_positions = {bs: [i - (bar_width / 2) * (len(bs_values) - 1) + j * bar_width for i in range(len(labels))] for j, bs in enumerate(bs_values.keys())}
@@ -1021,7 +1021,7 @@ class Plotter:
                 label=self.config[plot]["label"].format(bs.name),
                 color=self.colors[bs.name],
             )
-            plt.bar_label(bar_container, fontsize=16.5)
+            plt.bar_label(bar_container, fontsize=16)
         if plot_title:
             plt.title(self.config[plot]["title"].format(self.sim.experiment_name), fontsize=self.fontsize)
         # plt.xlabel(self.config[plot]["xlabel"], fontsize=self.fontsize)
@@ -1042,7 +1042,8 @@ class Plotter:
         # plt.xticks(rotation=60, ha="right")
         if log_scale:
             plt.yscale("log")
-        plt.ylim(0, 1.1 * max([v for values in bs_values.values() for v in values.values() ])) # Padding at the top of the figure
+        #plt.ylim(0, 1.4 * max([v for values in bs_values.values() for v in values.values() ])) # Padding at the top of the figure
+        plt.ylim(0,10**5.5)
         if self.sim.experiment_name == "minimum":
             plt.legend(
                 ncol=self.config[plot]["legend"]["ncol"],
