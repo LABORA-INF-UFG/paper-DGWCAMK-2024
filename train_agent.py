@@ -109,7 +109,7 @@ if __name__ == "__main__":
             n_users=3
         )
 
-        be_users = sim.add_users(
+        be_users = sim.add_users( 
             basestation_id=bs_id,
             slice_id=BE,
             n_users=4

@@ -4,3 +4,4 @@ plots/*
 *.bin
 evaluations/*
 nohup.out
+tensorboard-logs/*

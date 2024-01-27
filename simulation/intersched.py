@@ -322,18 +322,16 @@ class SAC(InterSliceScheduler):
         metrics.append(s.get_avg_buffer_latency()) # Average buffer latency (ms)
         metrics.append(s.get_long_term_thr(window=self.window)) # Long-term served throughput (Mbps)
         metrics.append(s.get_fifth_perc_thr(window=self.window)) # Fifth-percentile served throughput (Mbps)
+        # print("SE: {:.2f} bits/s/Hz, Served thr: {:.2f} Mbps, Sent thr: {:.2f} Mbps, Buffer occupancy: {:.2f}\%, Pkt loss rate: {:.2f}\%, Arriv thr: {:.2f} Mbps, Avg buff lat: {:.2f} ms, Long-term thr: {:.2f} Mbps, Fifth perc thr: {:.2f} Mbps".format(
+        #     metrics[0], metrics[1]/1e6, metrics[2]/1e6, metrics[3]*100, metrics[4]*100, metrics[5]/1e6, metrics[6]*1e3, metrics[7]/1e6, metrics[8]/1e6))
         return np.array(metrics)
     
     def schedule(self, slices: Dict[int, Slice], users: Dict[int, User], rbgs: List[RBG]) -> None:
         obs = self.get_lim_obs_space_array(slices)
         action, _states = self.agent.predict(obs, deterministic=True)
-        rbs_allocation = (
-            ((action + 1) / np.sum(action + 1)) * len(rbgs)
-            if np.sum(action + 1) != 0
-            else np.ones(action.shape[0])
-            * (1 / action.shape[0])
-            * len(rbgs)
-        )
+        normalized_action = ((action + 1) / np.sum(action + 1)) if np.sum(action + 1) != 0 else np.ones(action.shape[0]) * (1 / action.shape[0])
+        rbs_allocation = normalized_action* len(rbgs)
+
         action_approx = [int(np.floor(i)) for i in rbs_allocation]
         while sum(action_approx) < len(rbgs):
             action_approx[np.argmin(np.abs(rbs_allocation - (np.array(action_approx)+1)))] += 1
@@ -343,7 +341,7 @@ class SAC(InterSliceScheduler):
         # action_values = self.action_space_options[action_idx]
         #allocation = dict(zip(slices.keys(), action_values))
         allocation = dict(zip(slices.keys(), action_approx))
-        self.action_set.add(tuple(np.array(action_approx)/len(rbgs) * 100))
+        self.action_set.add(tuple(normalized_action * 100))
         # print(self.action_set)
         # print("0: {}, 1: {}, 2: {}".format(slices[0].type, slices[1].type, slices[2].type))
         # print(allocation)

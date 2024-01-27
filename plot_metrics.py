@@ -49,9 +49,9 @@ if __name__ == "__main__":
             print("No resource for {} in {}% of the steps".format(s.type, sum([1 for x in s.hist_n_allocated_RBGs if x == 0])/2000 * 100))
             if s.type == "eMBB":
                 print("Maximum eMBB packet loss rate: {}\%".format(max(max(u.hist_pkt_loss) * 100 for u in s.users.values())))
-        # if bs.name == "Nahum\'s":
-        #     print("Nahum\s action set =", bs.action_set)
-        #     print(len(bs.action_set), "actions")
+        if bs.name == "Nahum\'s":
+            print("Nahum\s action set =", bs.action_set)
+            print(len(bs.action_set), "actions")
     
     plotter = Plotter(sim)
     plotter.plot_disrespected_steps(log_scale=True)
