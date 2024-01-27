@@ -91,6 +91,14 @@ if __name__ == "__main__":
         basestations=["SOA", "Nahum\'s", "RR"],
     )
     
+    plotter.plot_slice_metric_line(
+        plot="pkt_loss",
+        density=density,
+        slices=["BE"],
+        basestations=["SOA", "Nahum\'s", "RR"],
+        plot_requirement=False
+    )
+
     for s in ["eMBB", "URLLC", "BE"]:
         plotter.plot_slice_metric_line(
             plot="rbg_alloc",

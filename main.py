@@ -75,7 +75,7 @@ if __name__ == "__main__":
         },
         user_config=UserConfiguration(
             max_lat=100, # TTIs
-            buffer_size=1024*8192*8, # bits
+            buffer_size= 32*1024*8,#1024*2048*8, # bits
             pkt_size=1500*8, # bits
             flow_type="poisson",
             flow_throughput=15e6, # bits/s
@@ -91,7 +91,7 @@ if __name__ == "__main__":
         },
         user_config=UserConfiguration(
             max_lat=100, # TTIs
-            buffer_size=1024*8192*8, # bits
+            buffer_size=32*1024*8, #1024*2048*8, # bits
             pkt_size=500*8, # bits
             flow_type="poisson",
             flow_throughput=1e6, # bits/s
@@ -106,7 +106,7 @@ if __name__ == "__main__":
         },
         user_config=UserConfiguration(
             max_lat=100, # TTIs
-            buffer_size=1024*8192*8, # bits
+            buffer_size=32*1024*8, #1024*2048*8, # bits
             pkt_size=1500*8, # bits
             flow_type="poisson",
             flow_throughput=15e6, # bits/s
@@ -309,6 +309,7 @@ if __name__ == "__main__":
             sim.basestations[sac_bs].scheduler_elapsed_time.append(time.time() - start)
             for s in sim.basestations[sac_bs].slices.values():
                 s.schedule_rbgs()
+            # print("Reward:", sim.basestations[sac_bs].calculate_reward())
 
             sim.transmit()
             

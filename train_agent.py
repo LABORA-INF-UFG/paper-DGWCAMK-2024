@@ -22,7 +22,7 @@ if __name__ == "__main__":
         },
         user_config=UserConfiguration(
             max_lat=100, # TTIs
-            buffer_size=1024*8192*8, # bits
+            buffer_size=32*1024*8,#1024*2048*8, # bits
             pkt_size=1500*8, # bits
             flow_type="poisson",
             flow_throughput=15e6, # bits/s
@@ -38,7 +38,7 @@ if __name__ == "__main__":
         },
         user_config=UserConfiguration(
             max_lat=100, # TTIs
-            buffer_size=1024*8192*8, # bits
+            buffer_size=32*1024*8,#1024*2048*8, # bits
             pkt_size=500*8, # bits
             flow_type="poisson",
             flow_throughput=1e6, # bits/s
@@ -53,7 +53,7 @@ if __name__ == "__main__":
         },
         user_config=UserConfiguration(
             max_lat=100, # TTIs
-            buffer_size=1024*8192*8, # bits
+            buffer_size=32*1024*8,#1024*2048*8, # bits
             pkt_size=1500*8, # bits
             flow_type="poisson",
             flow_throughput=15e6, # bits/s
@@ -74,7 +74,7 @@ if __name__ == "__main__":
         inter_scheduler=intersched.DummyScheduler(),
         rbs_per_rbg=sim.rbs_per_rbg,
         bandwidth=100e6, # 100MHz
-        seed = 100, # For generating random numbers
+        seed = 1, # For generating random numbers
         name = "sac_train",
         window_max=10
     )
