@@ -9,10 +9,11 @@ PIP dependencies:
 - matplotlib
 - stable-baselines3
 - seaborn
+- tensorboard
 
 Install pip dependencies
 ```bash
-pip install tqdm numpy matplotlib stable-baselines3 seaborn
+pip install tqdm numpy matplotlib stable-baselines3 seaborn tensorboard
 ```
 
 The repository contains the best trained Nahum's agent used in the paper's evaluation, located in `./best_sac/best_model.zip`. To train again, you can execute:
