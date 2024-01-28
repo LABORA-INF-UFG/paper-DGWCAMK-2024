@@ -102,11 +102,12 @@ class Env(gymnasium.Env):
         metrics.append(s.get_avg_buffer_latency()) # Average buffer latency (seconds)
         metrics.append(s.get_long_term_thr(window=self.window)) # Long-term served throughput (bits/s)
         metrics.append(s.get_fifth_perc_thr(window=self.window)) # Fifth-percentile served throughput (bits/s)
-        # print("SE: {:.2f} bits/s/Hz, Served thr: {:.2f} Mbps, Sent thr: {:.2f} Mbps, Buffer occupancy: {:.2f}\%, Pkt loss rate: {:.2f}\%, Arriv thr: {:.2f} Mbps, Avg buff lat: {:.2f} ms, Long-term thr: {:.2f} Mbps, Fifth perc thr: {:.2f} Mbps".format(
-        #     metrics[0], metrics[1]/1e6, metrics[2]/1e6, metrics[3]*100, metrics[4]*100, metrics[5]/1e6, metrics[6]*1e3, metrics[7]/1e6, metrics[8]/1e6))
+        # print("Slices: {}, SE: {:.2f} bits/s/Hz, Served thr: {:.2f} Mbps, Sent thr: {:.2f} Mbps, Buffer occupancy: {:.2f}\%, Pkt loss rate: {:.2f}\%, Arriv thr: {:.2f} Mbps, Avg buff lat: {:.2f} ms, Long-term thr: {:.2f} Mbps, Fifth perc thr: {:.2f} Mbps".format(
+        #     s.type, metrics[0], metrics[1]/1e6, metrics[2]/1e6, metrics[3]*100, metrics[4]*100, metrics[5]/1e6, metrics[6]*1e3, metrics[7]/1e6, metrics[8]/1e6))
         return np.array(metrics)
 
     def step(self, action: np.array) -> Tuple[np.ndarray, float, bool, Dict]:
+        # print("Action:",action)
         rbs_allocation = (
             ((action + 1) / np.sum(action + 1)) * len(self.bs.rbgs)
             if np.sum(action + 1) != 0
