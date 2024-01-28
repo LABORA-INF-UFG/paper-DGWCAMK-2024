@@ -212,7 +212,6 @@ class SACtrainer:
         env = stable_baselines3.common.monitor.Monitor(self.env)
         env = stable_baselines3.common.vec_env.DummyVecEnv([lambda: env])
         self.env = stable_baselines3.common.vec_env.VecNormalize(env)
-        
         self.agent = stable_baselines3.SAC( # Using optimized hyperparameters from Cleverson's paper
             policy="MlpPolicy",
             env=self.env,
@@ -224,6 +223,8 @@ class SACtrainer:
             learning_starts=0,
             train_freq=32,
             tau=0.08,
+            target_entropy = "auto",
+            ent_coef = "auto",
             policy_kwargs=dict(net_arch=[64,64]),
             tensorboard_log="tensorboard-logs/"
         )
