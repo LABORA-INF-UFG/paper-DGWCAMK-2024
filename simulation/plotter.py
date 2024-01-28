@@ -187,9 +187,9 @@ class Plotter:
                 "label_single_slice":"{}",
                 "label_multi_slice":"{}-{}",
                 "legend":{
-                    "ncol":1,
+                    "ncol":2,
                     "bbox_to_anchor":None,
-                    "loc":(1.02, 0.4)
+                    "loc":"best" #(1.02, 0.4)
                 },
                 "savefig":{
                     "path":self.path + self.sim.experiment_name + "/",
@@ -206,7 +206,7 @@ class Plotter:
                 "legend":{
                     "ncol":1,
                     "bbox_to_anchor":None,
-                    "loc":(1.02, 0.4)
+                    "loc":"best" #(1.02, 0.4)
                 },
                 "savefig":{
                     "path":self.path + self.sim.experiment_name + "/",
@@ -221,7 +221,7 @@ class Plotter:
                 "label_single_slice":"{}",
                 "label_multi_slice":"{}-{}",
                 "legend":{
-                    "ncol":2, #1,
+                    "ncol":1, #1,
                     "bbox_to_anchor":None,
                     "loc":"best" #(1.02, 0.4)
                 },
@@ -255,7 +255,7 @@ class Plotter:
                 "label_single_slice":"{}",
                 "label_multi_slice":"{}-{}",
                 "legend":{
-                    "ncol":2, #1,
+                    "ncol":1, #1,
                     "bbox_to_anchor":None,
                     "loc":"best"#(1.02, 0.4)
                 },
@@ -359,7 +359,7 @@ class Plotter:
                 "legend":{
                     "ncol":1,
                     "bbox_to_anchor":None,
-                    "loc":(1.02, 0.4)
+                    "loc":"best" # (1.02, 0.4)
                 },
                 "savefig":{
                     "path":self.path + self.sim.experiment_name + "/",
@@ -482,6 +482,21 @@ class Plotter:
                     "filename":"_bs_rbg_alloc_norm.pdf"
                 }
             },
+            "bs_rbg_alloc_norm_cdf":{
+                "xlabel":"Resource usage (%)",
+                "ylabel":"CDF",
+                "title":"CDF of radio resource allocation",
+                "label":"{}",
+                "legend":{
+                    "ncol":1,
+                    "bbox_to_anchor":None,
+                    "loc":"best"#(1.02, 0.4)
+                },
+                "savefig":{
+                    "path":self.path + self.sim.experiment_name + "/",
+                    "filename":"_bs_rbg_alloc_norm_cdf.pdf"
+                }
+            },
             "reward":{
                 "xlabel":"Time (ms)",
                 "ylabel":"Reward",
@@ -559,13 +574,13 @@ class Plotter:
             },
             "disrespected_steps":{
                 "xlabel":"Requirement",
-                "ylabel":"SLA violations (log)",
+                "ylabel":"SLA violations (#)",
                 "title":"Disrespected requirements for {} experiment",
                 "label":"{}",
                 "legend":{
-                    "ncol":2,
+                    "ncol":1,
                     "bbox_to_anchor":None,
-                    "loc":"upper left" #(1.02, 0.2)
+                    "loc":"best" #(1.02, 0.2)
                 },
                 "savefig":{
                     "path":self.path + self.sim.experiment_name + "/",
@@ -593,7 +608,7 @@ class Plotter:
         self.colors:Dict[str, str] = {
             "SOA": "blue",
             "RR": "orange",
-            "Nahum\'s": "green",
+            "DRL": "green",
             "eMBB": "olive",
             "URLLC": "pink",
             "BE": "brown",
@@ -784,6 +799,10 @@ class Plotter:
         # if slices is not None and slices[0] == "URLLC" and plot in ["pkt_loss", "pkt_loss_worst"]:
         #     plt.ylim(0, 0.002)
         plt.xlim(0, 2000-density)
+        # if plot == "rbg_alloc_norm":
+        #     plt.ylim(0, 34)
+        # elif plot == "pkt_loss_worst":
+        #     plt.ylim(0,33)
         path = self.config[plot]["savefig"]["path"]
         if slices is not None:
             path += "_".join(slices) + "_"
@@ -822,6 +841,40 @@ class Plotter:
             fontsize=self.fontsize
         )
         plt.xlim(0, 2000-density)
+        path = self.config[plot]["savefig"]["path"]
+        path += self.config[plot]["savefig"]["filename"]
+        plt.savefig(path,bbox_inches='tight')
+        plt.close('all')
+    
+    def plot_basestation_metric_cdf(
+        self,
+        plot:str,
+        basestations: List[str] = None,
+        plot_title:bool = False,
+    ) -> None:
+        self.init_figure()
+        for bs_id, bs in self.sim.basestations.items():
+            if basestations is not None and bs.name not in basestations:
+                continue
+            metric = self.calculate_basestation_metric(plot[:-4], bs)
+            sorted = np.sort(metric)
+            y_ticks = np.linspace(0, 1, len(sorted))
+            plt.plot(
+                sorted,
+                y_ticks,
+                label=self.config[plot]["label"].format(bs.name),
+                color=self.colors[bs.name]
+            )
+        plt.xlabel(self.config[plot]["xlabel"], fontsize=self.fontsize)
+        plt.ylabel(self.config[plot]["ylabel"], fontsize=self.fontsize)
+        if plot_title:
+            plt.title(self.config[plot]["title"], fontsize=self.fontsize)
+        plt.legend(
+            ncol=self.config[plot]["legend"]["ncol"],
+            bbox_to_anchor=self.config[plot]["legend"]["bbox_to_anchor"],
+            loc=self.config[plot]["legend"]["loc"],
+            fontsize=self.fontsize
+        )
         path = self.config[plot]["savefig"]["path"]
         path += self.config[plot]["savefig"]["filename"]
         plt.savefig(path,bbox_inches='tight')
@@ -1042,8 +1095,14 @@ class Plotter:
         # plt.xticks(rotation=60, ha="right")
         if log_scale:
             plt.yscale("log")
+            plt.ylim(0,10**5.5)
+        else:
+            if self.sim.experiment_name == "minimum":
+                plt.ylim(0, 1600)
+            elif self.sim.experiment_name == "standard":
+                plt.ylim(0,300)
         #plt.ylim(0, 1.4 * max([v for values in bs_values.values() for v in values.values() ])) # Padding at the top of the figure
-        plt.ylim(0,10**5.5)
+        
         if self.sim.experiment_name == "minimum":
             plt.legend(
                 ncol=self.config[plot]["legend"]["ncol"],

@@ -49,12 +49,12 @@ if __name__ == "__main__":
             print("No resource for {} in {}% of the steps".format(s.type, sum([1 for x in s.hist_n_allocated_RBGs if x == 0])/2000 * 100))
             if s.type == "eMBB":
                 print("Maximum eMBB packet loss rate: {}\%".format(max(max(u.hist_pkt_loss) * 100 for u in s.users.values())))
-        if bs.name == "Nahum\'s":
-            print("Nahum\s action set =", bs.action_set)
+        if bs.name == "DRL":
+            print("DRL action set =", bs.action_set)
             print(len(bs.action_set), "actions")
     
     plotter = Plotter(sim)
-    plotter.plot_disrespected_steps(log_scale=True)
+    plotter.plot_disrespected_steps(log_scale=False)
     plotter.plot_se_line(
         plot="slice_se",
         multipliers=SE_multipliers,
@@ -73,59 +73,55 @@ if __name__ == "__main__":
     plotter.plot_basestation_metric_line(
         plot="bs_rbg_alloc",
         density=density,
-        basestations=["SOA", "Nahum\'s", "RR"],
+        basestations=["SOA", "DRL", "RR"],
     )
     plotter.plot_basestation_metric_line(
         plot="bs_rbg_alloc_norm",
         density=density,
-        basestations=["SOA", "Nahum\'s", "RR"],
+        basestations=["SOA", "DRL", "RR"],
     )
     plotter.plot_basestation_metric_line(
         plot="reward",
         density=density,
-        basestations=["SOA", "Nahum\'s", "RR"],
+        basestations=["SOA", "DRL", "RR"],
     )
     plotter.plot_basestation_metric_line(
         plot="reward_cumulative",
         density=density,
-        basestations=["SOA", "Nahum\'s", "RR"],
+        basestations=["SOA", "DRL", "RR"],
+    )
+    plotter.plot_basestation_metric_cdf(
+        plot="bs_rbg_alloc_norm_cdf",
+        basestations=["SOA", "DRL", "RR"],
     )
     
-    plotter.plot_slice_metric_line(
-        plot="pkt_loss",
-        density=density,
-        slices=["BE"],
-        basestations=["SOA", "Nahum\'s", "RR"],
-        plot_requirement=False
-    )
-
     for s in ["eMBB", "URLLC", "BE"]:
         plotter.plot_slice_metric_line(
             plot="rbg_alloc",
             density=density,
             slices=[s],
-            basestations=["SOA", "Nahum\'s", "RR"],
+            basestations=["SOA", "DRL", "RR"],
             plot_requirement=False
         )
         plotter.plot_slice_metric_line(
             plot="rbg_alloc_norm",
             density=density,
             slices=[s],
-            basestations=["SOA", "Nahum\'s", "RR"],
+            basestations=["SOA", "DRL", "RR"],
             plot_requirement=False
         )
         plotter.plot_slice_metric_line(
             plot="sent_thr",
             density=density,
             slices=[s],
-            basestations=["SOA", "Nahum\'s", "RR"],
+            basestations=["SOA", "DRL", "RR"],
             plot_requirement=False
         )
         plotter.plot_slice_metric_line(
             plot="sent_thr_worst",
             density=density,
             slices=[s],
-            basestations=["SOA", "Nahum\'s", "RR"],
+            basestations=["SOA", "DRL", "RR"],
             plot_requirement=False
         )
 
@@ -144,21 +140,21 @@ if __name__ == "__main__":
         plot="rbg_alloc_norm_cdf",
         density=density,
         slices=["eMBB"],
-        basestations=["SOA", "Nahum\'s", "RR"],
+        basestations=["SOA", "DRL", "RR"],
         plot_requirement=False
     )
     plotter.plot_slice_metric_cdf(
         plot="rbg_alloc_norm_cdf",
         density=density,
         slices=["URLLC"],
-        basestations=["SOA", "Nahum\'s", "RR"],
+        basestations=["SOA", "DRL", "RR"],
         plot_requirement=False
     )
     plotter.plot_slice_metric_cdf(
         plot="rbg_alloc_norm_cdf",
         density=density,
         slices=["BE"],
-        basestations=["SOA", "Nahum\'s", "RR"],
+        basestations=["SOA", "DRL", "RR"],
         plot_requirement=False
     )
 
@@ -168,14 +164,14 @@ if __name__ == "__main__":
                 plot=plot,
                 density=density,
                 slices=[s],
-                basestations=["SOA", "Nahum\'s", "RR"],
+                basestations=["SOA", "DRL", "RR"],
                 plot_requirement=True
             )
             plotter.plot_slice_metric_cdf(
                 plot=plot+"_cdf",
                 density=density,
                 slices=[s],
-                basestations=["SOA", "Nahum\'s", "RR"],
+                basestations=["SOA", "DRL", "RR"],
                 plot_requirement=True
             )
     
@@ -185,14 +181,14 @@ if __name__ == "__main__":
                 plot=plot,
                 density=density,
                 slices=[s],
-                basestations=["SOA", "Nahum\'s", "RR"],
+                basestations=["SOA", "DRL", "RR"],
                 plot_requirement=True
             )
             plotter.plot_slice_metric_cdf(
                 plot=plot+"_cdf",
                 density=density,
                 slices=[s],
-                basestations=["SOA", "Nahum\'s", "RR"],
+                basestations=["SOA", "DRL", "RR"],
                 plot_requirement=True
             )
 

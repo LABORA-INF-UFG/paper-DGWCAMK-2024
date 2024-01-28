@@ -171,7 +171,7 @@ if __name__ == "__main__":
         rbs_per_rbg=sim.rbs_per_rbg,
         bandwidth=100e6, # 100MHz
         seed = 1, # For generating random numbers
-        name = "Nahum\'s",
+        name = "DRL",
         window_max=10,
     )
 
