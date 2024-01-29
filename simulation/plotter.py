@@ -784,8 +784,8 @@ class Plotter:
                 linestyle='--',
                 label="requirement"
             )
-        if plot == "rbg_alloc_norm" and sim.experiment_name=="minimum":
-            plt.ylim(0,41)
+        if plot == "rbg_alloc_norm" and self.sim.experiment_name=="standard":
+            plt.ylim(0,51)
 
         plt.xlabel(self.config[plot]["xlabel"], fontsize=self.fontsize)
         plt.ylabel(self.config[plot]["ylabel"], fontsize=self.fontsize)
