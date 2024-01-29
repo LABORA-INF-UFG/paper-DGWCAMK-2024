@@ -31,7 +31,7 @@ class Env(gymnasium.Env):
         self.TTI = TTI
 
         
-        self.action_space = gymnasium.spaces.Box(low=-1, high=1, shape=(len(self.bs.slices),))
+        self.action_space = gymnasium.spaces.Box(low=-1.0, high=1.0, shape=(len(self.bs.slices),), dtype=np.float32,)
         self.obs_space_length = 0
         for s in self.bs.slices.values():
             if s.type == "eMBB" or s.type == "URLLC":
@@ -107,7 +107,7 @@ class Env(gymnasium.Env):
         return np.array(metrics)
 
     def step(self, action: np.array) -> Tuple[np.ndarray, float, bool, Dict]:
-        # print("Action:",action)
+        print("Action:",action)
         rbs_allocation = (
             ((action + 1) / np.sum(action + 1)) * len(self.bs.rbgs)
             if np.sum(action + 1) != 0

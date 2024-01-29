@@ -361,6 +361,7 @@ if __name__ == "__main__":
 
     # Saving simulation data
     sim.basestations[sac_bs].action_set = sim.basestations[sac_bs].scheduler.action_set
+    sim.basestations[sac_bs].raw_action_set = sim.basestations[sac_bs].scheduler.raw_action_set
     sim.basestations[sac_bs].scheduler = None
     import pickle, os
     os.makedirs("./experiment_data/", exist_ok=True)

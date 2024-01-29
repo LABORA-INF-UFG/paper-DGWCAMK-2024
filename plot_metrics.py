@@ -51,6 +51,7 @@ if __name__ == "__main__":
                 print("Maximum eMBB packet loss rate: {}\%".format(max(max(u.hist_pkt_loss) * 100 for u in s.users.values())))
         if bs.name == "DRL":
             print("DRL action set =", bs.action_set)
+            print("DRL raw action set =", bs.raw_action_set)
             print(len(bs.action_set), "actions")
     
     plotter = Plotter(sim)
