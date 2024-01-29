@@ -165,6 +165,7 @@ class StepwiseOptimalAlgorithm(InterSliceScheduler):
                 ue_offset = (ue_offset + 1) % len(user_prior)
             slice_min_rbs[s_id] = sum(ue_alloc_rbs[u_id] for u_id in s.users)
         
+        # DO NOT HAPPEN IN THE EVALUATION SCENARIO OF THE PAPER
         # If there are not enough resources for all slices,
         # we allocate all resources proportionally to the minimum requirements
         if sum(slice_min_rbs.values()) > n_rbgs or self.use_all_resources:
@@ -283,6 +284,7 @@ class SAC(InterSliceScheduler):
         self.action_space_options = None
         self.window = 1
         self.action_set = set()
+        self.raw_action_set = set()
         
     def create_combinations(self, n_rbgs: int, n_slices: int) -> None:
         combinations = []
@@ -329,6 +331,7 @@ class SAC(InterSliceScheduler):
     def schedule(self, slices: Dict[int, Slice], users: Dict[int, User], rbgs: List[RBG]) -> None:
         obs = self.get_lim_obs_space_array(slices)
         action, _states = self.agent.predict(obs, deterministic=True)
+        self.raw_action_set.add(tuple(action))
         normalized_action = ((action + 1) / np.sum(action + 1)) if np.sum(action + 1) != 0 else np.ones(action.shape[0]) * (1 / action.shape[0])
         rbs_allocation = normalized_action* len(rbgs)
 
