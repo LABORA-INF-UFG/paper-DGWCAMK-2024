@@ -533,9 +533,9 @@ class Plotter:
                 "title":"Average spectral efficiency",
                 "label":"{}",
                 "legend":{
-                    "ncol":1,
+                    "ncol":3,
                     "bbox_to_anchor":None,
-                    "loc": "upper right"#(1.02, 0.4)
+                    "loc": "best"#(1.02, 0.4)
                 },
                 "savefig":{
                     "path":self.path,
@@ -548,9 +548,9 @@ class Plotter:
                 "title":"Worst spectral efficiency",
                 "label":"{}",
                 "legend":{
-                    "ncol":1,
+                    "ncol":3,
                     "bbox_to_anchor":None,
-                    "loc": "upper right"#(1.02, 0.4)
+                    "loc": "best"#(1.02, 0.4)
                 },
                 "savefig":{
                     "path":self.path,
@@ -784,6 +784,9 @@ class Plotter:
                 linestyle='--',
                 label="requirement"
             )
+        if plot == "rbg_alloc_norm" and sim.experiment_name=="minimum":
+            plt.ylim(0,41)
+
         plt.xlabel(self.config[plot]["xlabel"], fontsize=self.fontsize)
         plt.ylabel(self.config[plot]["ylabel"], fontsize=self.fontsize)
         if slices is not None and len(slices) == 1 and plot_title:
@@ -910,7 +913,10 @@ class Plotter:
                     downsampled,
                     label=self.config[plot]["label"].format(ue + 1)
                 )
-        
+        if plot == "slice_se":
+            plt.ylim(0, 10)
+        elif plot == "slice_se_worst":
+            plt.ylim(0, 5)
         plt.xlabel(self.config[plot]["xlabel"], fontsize=self.fontsize)
         plt.ylabel(self.config[plot]["ylabel"], fontsize=self.fontsize)
         if plot_title:
