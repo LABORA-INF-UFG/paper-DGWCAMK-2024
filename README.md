@@ -16,18 +16,18 @@ Install pip dependencies
 pip install tqdm numpy matplotlib stable-baselines3 seaborn tensorboard
 ```
 
-The repository contains the best trained Nahum's agent used in the paper's evaluation, located in `./best_sac/best_model.zip`. To train again, you can execute:
+The repository contains the best-trained DRL agent used in the paper's evaluation, located in `./best_sac/best_model.zip`. To train again, you can execute:
 ```bash
 python train_agent.py
 ```
 
 ## Experiments
 There are three implemented experiments:
-- **standard**: SAO uses minimal resources while Nahum's agent and RR use 100%;
-- **minimum**: SAO, Nahum's agent and RR use limited resources as calculated by SAO;
-- **full**: SAO, Nahum's agent and RR use 100% of the resources. SAO uses 100% by allocating all resources at the same proportion of the minimal needed for each slice. As this behaviour actually do not have interesting results, it is not used in the paper.
+- **standard**: SOA uses minimal resources while the DRL agent and RR use 100%;
+- **minimum**: SOA, the DRL agent and RR use limited resources as calculated by SOA;
+- **full**: SOA, the DRL agent, and RR use 100% of the resources. SOA uses 100% by allocating all resources at the same proportion of the minimum needed for each slice. As this behavior does not have interesting results, it is not used in the paper.
 
-To run the experiment, simply execute:
+To run the experiment, execute:
 ```bash
 python main.py <experiment_name>
 ```
@@ -38,7 +38,7 @@ To generate plots, execute:
 ```bash
 python plot_metrics.py <experiment_name>
 ```
-This will use the saved experiment data to generate plots in the `./plots/` folder.
+This will generate plots in the `./plots/` folder using the saved experiment data. It also prints general metrics, like the execution time for each scheduler and the set of DRL chosen actions.
 
 To generate plots for the spectral efficiency dataset used in the experiments, execute:
 ```bash
