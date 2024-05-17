@@ -1,5 +1,4 @@
-# Optimal Inter-Slices Radio Resource Scheduling for Quality of Service Assurance
-Generic simulation of RAN with support for slice scheduling
+# Stepwise Optimal Inter-Slices Radio Resource Scheduling for Service-Level Agreement Assurance
 
 Runs with Python 3.7.17, which you can install via [Pyenv](https://github.com/pyenv/pyenv).
 
@@ -24,7 +23,7 @@ python train_agent.py
 ## Experiments
 There are three implemented experiments:
 - **standard**: SOA uses minimal resources while the DRL agent and RR use 100%;
-- **minimum**: SOA, the DRL agent and RR use limited resources as calculated by SOA;
+- **minimum**: SOA, the DRL agent, and RR use limited resources as calculated by SOA;
 - **full**: SOA, the DRL agent, and RR use 100% of the resources. SOA uses 100% by allocating all resources at the same proportion of the minimum needed for each slice. As this behavior does not have interesting results, it is not used in the paper.
 
 To run the experiment, execute:
